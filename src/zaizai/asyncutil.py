@@ -40,29 +40,30 @@ class Debouncer:
         self._delay = delay_sec
         self._action = action
         self._pending: dict[Hashable, asyncio.Task[None]] = {}
+        self._tasks: set[asyncio.Task[None]] = set()  # pending and running
 
     def trigger(self, key: Hashable) -> None:
         if key in self._pending:
             return
-        self._pending[key] = asyncio.get_running_loop().create_task(self._fire(key))
+        task = asyncio.get_running_loop().create_task(self._fire(key))
+        self._pending[key] = task
+        self._tasks.add(task)
+        task.add_done_callback(self._tasks.discard)
 
     async def _fire(self, key: Hashable) -> None:
         try:
             await asyncio.sleep(self._delay)
-            # Leave the window before running so triggers during the action
-            # schedule a fresh run.
+            # Re-open the window before running so triggers during the action
+            # schedule a fresh run; this task stays referenced in self._tasks.
             self._pending.pop(key, None)
             await self._action(key)
         except asyncio.CancelledError:
             raise
         except Exception:
             log.exception("debounced action failed for key %r", key)
-        finally:
-            if self._pending.get(key) is asyncio.current_task():
-                del self._pending[key]
 
     async def aclose(self) -> None:
-        tasks = list(self._pending.values())
+        tasks = list(self._tasks)
         self._pending.clear()
         for t in tasks:
             t.cancel()

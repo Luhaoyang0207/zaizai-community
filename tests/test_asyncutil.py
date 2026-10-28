@@ -108,3 +108,35 @@ async def test_with_retry_raises_after_attempts_exhausted():
     with pytest.raises(ValueError, match="fail 3"):
         await with_retry(bad, attempts=3, delay_sec=0.01)
     assert n == 3
+
+
+async def test_aclose_cancels_pending_action():
+    calls: list[str] = []
+
+    async def action(key):
+        calls.append(key)
+
+    d = Debouncer(0.1, action)
+    d.trigger("a")
+    await d.aclose()
+    await asyncio.sleep(0.2)
+    assert calls == []
+
+
+async def test_aclose_cancels_in_flight_action():
+    started = asyncio.Event()
+    cancelled = asyncio.Event()
+
+    async def action(key):
+        started.set()
+        try:
+            await asyncio.sleep(10)
+        except asyncio.CancelledError:
+            cancelled.set()
+            raise
+
+    d = Debouncer(0.01, action)
+    d.trigger("a")
+    await asyncio.wait_for(started.wait(), 2)
+    await d.aclose()
+    assert cancelled.is_set()

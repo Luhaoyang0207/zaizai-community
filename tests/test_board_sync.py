@@ -92,3 +92,16 @@ async def test_delete_error_on_missing_message_is_ignored(store):
     gw = FakeGateway(existing={50}, delete_raises=True)
     await sync_board(store, gw, Mode.RANKED, [[entry(1)]])
     assert store.get_board_message_ids(Mode.RANKED) == [50]
+
+
+async def test_partial_failure_persists_ids_sent_so_far(store):
+    class Failing(FakeGateway):
+        async def send(self, mode, page, page_index):
+            if page_index == 1:
+                raise GatewayError("boom")
+            return await super().send(mode, page, page_index)
+
+    gw = Failing()
+    with pytest.raises(GatewayError):
+        await sync_board(store, gw, Mode.RANKED, [[entry(1)], [entry(2)]])
+    assert store.get_board_message_ids(Mode.RANKED) == [1001]

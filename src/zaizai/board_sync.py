@@ -29,13 +29,19 @@ async def sync_board(
     """Page i maps to the i-th stored message id; recreate, add or delete as needed."""
     old_ids = store.get_board_message_ids(mode)
     new_ids: list[int] = []
-    for index, page in enumerate(pages):
-        message_id = old_ids[index] if index < len(old_ids) else None
-        if message_id is not None and await gateway.exists(message_id):
-            await gateway.edit(message_id, mode, page, index)
-            new_ids.append(message_id)
-        else:
-            new_ids.append(await gateway.send(mode, page, index))
+    try:
+        for index, page in enumerate(pages):
+            message_id = old_ids[index] if index < len(old_ids) else None
+            if message_id is not None and await gateway.exists(message_id):
+                await gateway.edit(message_id, mode, page, index)
+                new_ids.append(message_id)
+            else:
+                new_ids.append(await gateway.send(mode, page, index))
+    except BaseException:
+        # Record what we know (new ids so far + untouched old ones) so the
+        # next refresh does not re-send and leave orphans.
+        store.set_board_message_ids(mode, new_ids + old_ids[len(new_ids):])
+        raise
     for extra in old_ids[len(pages):]:
         try:
             await gateway.delete(extra)
