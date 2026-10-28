@@ -44,5 +44,8 @@ Needs a real test Discord server and a separate test bot token; cannot be automa
 - [ ] 30 分钟超时（可临时把 `board.entry_timeout_min` 调成 1）-> 约 1~2 分钟内条目被清掉，卡片保留
 - [ ] 总表消息不提醒任何人（需求里写 @everyone 也不提醒）
 - [ ] 重启机器人后总表原地刷新，不重复发消息
+- [ ] 命令为空的模式（默认 `commands.other = ""`）不发总表
+- [ ] 手动删掉某个临时语音房间 -> 1 分钟内（清理任务）该条目消失
+- [ ] 需求里写 `# 标题`、`**粗体**` 或换行 -> 总表里按原文单行显示，不变成标题/粗体
 
 状态：未在测试服务器验证。

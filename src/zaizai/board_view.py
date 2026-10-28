@@ -10,7 +10,8 @@ Layout per message (see D-010):
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+import warnings
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 
 import discord
@@ -47,7 +48,28 @@ def effective_per_page(configured: int) -> int:
 
 
 def entry_requirement(text: str) -> str:
-    return _truncate(text.strip() or DEFAULT_REQUIREMENT, REQUIREMENT_LIMIT)
+    """One line of player text, markdown escaped, at most REQUIREMENT_LIMIT chars."""
+    one_line = " ".join(text.split())
+    if not one_line:
+        return DEFAULT_REQUIREMENT
+    with warnings.catch_warnings():
+        # discord.py 2.7.1 passes re.sub's count positionally (deprecated in 3.13+).
+        warnings.filterwarnings(
+            "ignore", "'count' is passed as positional", DeprecationWarning
+        )
+        escaped = discord.utils.escape_markdown(one_line)
+    return _truncate(escaped, REQUIREMENT_LIMIT)
+
+
+def split_live_entries(
+    entries: Iterable[Entry], room_exists: Callable[[int], bool]
+) -> tuple[list[Entry], list[Entry]]:
+    """(entries whose room still exists, entries whose room is gone), input order."""
+    live: list[Entry] = []
+    gone: list[Entry] = []
+    for entry in entries:
+        (live if room_exists(entry.room_id) else gone).append(entry)
+    return live, gone
 
 
 def card_url(guild_id: int, channel_id: int, message_id: int) -> str:

@@ -12,7 +12,12 @@ from discord.ext import commands, tasks
 
 from ..asyncutil import Debouncer
 from ..board_sync import sync_board
-from ..board_view import RoomInfo, build_board_view, effective_per_page
+from ..board_view import (
+    RoomInfo,
+    build_board_view,
+    effective_per_page,
+    split_live_entries,
+)
 from ..bot import discord_call
 from ..config import mode_in_scope
 from ..entries import find_expired, paginate_entries, sort_for_board
@@ -100,7 +105,25 @@ class Board(commands.Cog):
         self._ready_done = False
 
     def _modes(self) -> list[Mode]:
-        return [m for m in self.cfg.modes if mode_in_scope(self.cfg, m)]
+        """In-scope modes with a command; a disabled mode can never have entries."""
+        return [
+            m
+            for m, mc in self.cfg.modes.items()
+            if mode_in_scope(self.cfg, m) and mc.command
+        ]
+
+    def _live_entries(self, mode: Mode, guild: discord.Guild | None) -> list[Entry]:
+        """Delete entries whose room is gone (store or guild); return the rest."""
+
+        def room_exists(room_id: int) -> bool:
+            if self.store.get_room(room_id) is None:
+                return False
+            return guild is None or guild.get_channel(room_id) is not None
+
+        live, gone = split_live_entries(self.store.list_entries(mode), room_exists)
+        for entry in gone:
+            self.store.delete_entry_by_room(entry.room_id)
+        return live
 
     async def cog_load(self) -> None:
         self.cleanup_loop.start()
@@ -149,15 +172,14 @@ class Board(commands.Cog):
                 lambda: self.bot.fetch_channel(self.cfg.board_channel_id)
             )
 
+        live = self._live_entries(mode, guild)
         rooms: dict[int, RoomInfo] = {}
-        live: list[Entry] = []
-        for entry in self.store.list_entries(mode):
+        for entry in live:
             voice = guild.get_channel(entry.room_id)
-            if self.store.get_room(entry.room_id) is None or voice is None:
-                self.store.delete_entry_by_room(entry.room_id)
-                continue
-            rooms[entry.room_id] = RoomInfo(voice.name, len(getattr(voice, "members", [])))
-            live.append(entry)
+            assert voice is not None  # checked by _live_entries
+            rooms[entry.room_id] = RoomInfo(
+                voice.name, len(getattr(voice, "members", []))
+            )
 
         pages = paginate_entries(
             sort_for_board(live),
@@ -177,7 +199,7 @@ class Board(commands.Cog):
     @tasks.loop(seconds=CLEANUP_INTERVAL_SEC)
     async def cleanup_loop(self) -> None:
         try:
-            self._remove_expired()
+            self._cleanup()
         except Exception as e:
             await self.bot.report_error(e, "board.cleanup")
 
@@ -185,15 +207,19 @@ class Board(commands.Cog):
     async def _before_cleanup(self) -> None:
         await self.bot.wait_until_ready()
 
-    def _remove_expired(self) -> None:
+    def _cleanup(self) -> None:
+        """Drop entries of vanished rooms and timed-out entries; cards are kept."""
         now = time.time()
+        guild = self.bot.get_guild(self.cfg.guild_id)
         for mode in self._modes():
-            expired = find_expired(
-                self.store.list_entries(mode), now, self.cfg.board_entry_timeout_min
-            )
-            removed = [e for e in expired if self.store.delete_entry_by_room(e.room_id)]
+            before = len(self.store.list_entries(mode))
+            live = self._live_entries(mode, guild)
+            expired = find_expired(live, now, self.cfg.board_entry_timeout_min)
+            for entry in expired:
+                self.store.delete_entry_by_room(entry.room_id)
+            removed = before - len(live) + len(expired)
             if removed:
-                log.info("expired %d %s board entries", len(removed), mode.value)
+                log.info("removed %d stale %s board entries", removed, mode.value)
                 self.bot.dispatch("board_dirty", mode)
 
 

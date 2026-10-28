@@ -13,7 +13,7 @@ _最后更新：2026-10-28（已加入房间控制面板、房间空了直接删
 |---|---|---|---|
 | `commands.ranked` | 排位组队频道的命令 | `!pw` | 已确认 |
 | `commands.match` | 匹配组队频道的命令 | `!pp` | 已确认 |
-| `commands.other` | 其他游戏频道的命令 | （未定） | 待确认 |
+| `commands.other` | 其他游戏频道的命令（为空时该模式不发总表） | （未定） | 待确认 |
 | `commands.accept_fullwidth` | 是否同时识别全角 `！` | `true` | 已确认 |
 | `commands.need_voice` | 不在语音房间时是否拒绝并提示 | `true` | 已确认 |
 | `commands.need_voice_msg` | 拒绝时的提示文字 | 请先加入语音房间再发组队信息 | 建议值 |

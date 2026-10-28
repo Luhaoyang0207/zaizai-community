@@ -14,6 +14,7 @@ from zaizai.board_view import (
     header_text,
     room_button_label,
     room_url,
+    split_live_entries,
 )
 from zaizai.models import Entry, Mode
 
@@ -132,3 +133,22 @@ def test_full_page_worst_case_fits_discord_limits(show_count):
     assert view.total_children_count <= 40
     assert view.content_length() <= 4000
     assert len(_buttons(view)) == MAX_ENTRIES_PER_MESSAGE
+
+
+def test_entry_text_escapes_markdown_and_newlines():
+    text = entry_text(make_entry(1, text="# 标题\r\n**粗** _x_"), guild_id=7)
+    first, second = text.split("\n")
+    assert first == r"\# 标题 \*\*粗\*\* \_x\_"
+    assert second.startswith("<@201>")
+
+
+def test_entry_text_escaped_requirement_stays_within_limit():
+    text = entry_text(make_entry(1, text="*" * 500), guild_id=7)
+    assert len(text.split("\n")[0]) == REQUIREMENT_LIMIT
+
+
+def test_split_live_entries():
+    entries = [make_entry(1), make_entry(2), make_entry(3)]
+    live, gone = split_live_entries(entries, lambda room_id: room_id != 102)
+    assert [e.id for e in live] == [1, 3]
+    assert [e.id for e in gone] == [2]
