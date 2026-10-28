@@ -1,4 +1,4 @@
-from zaizai.cogs.voice_rooms import classify_transition, overflow_category_name
+from zaizai.cogs.voice_rooms import classify_transition, exclude_unmanaged, overflow_category_name
 
 ENT = {10, 11}
 ROOMS = {100, 101}
@@ -40,3 +40,9 @@ def test_room_to_entrance():
 def test_overflow_name():
     assert overflow_category_name("Ranked", 1) == "Ranked 2"
     assert overflow_category_name("Ranked", 2) == "Ranked 3"
+
+
+def test_shared_category_other_entrance_and_foreign_room_excluded():
+    live = {10: 0, 11: 0, 100: 2, 101: 0, 200: 3}
+    out = exclude_unmanaged(live, entrance_ids={10, 11}, tracked_elsewhere={200})
+    assert out == {100: 2, 101: 0}

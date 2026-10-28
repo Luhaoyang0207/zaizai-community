@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from collections.abc import Collection
+from collections.abc import Collection, Mapping
 from dataclasses import dataclass
 
 import discord
@@ -42,6 +42,16 @@ def classify_transition(
         left_room=before_id if before_id in room_ids else None,
         joined_room=after_id if after_id in room_ids else None,
     )
+
+
+def exclude_unmanaged(
+    live: Mapping[int, int],
+    entrance_ids: Collection[int],
+    tracked_elsewhere: Collection[int],
+) -> dict[int, int]:
+    """Drop entrance channels and rooms tracked under other modes from live rooms."""
+    skip = set(entrance_ids) | set(tracked_elsewhere)
+    return {cid: n for cid, n in live.items() if cid not in skip}
 
 
 def overflow_category_name(base_name: str, existing_count: int) -> str:
@@ -190,6 +200,8 @@ class VoiceRooms(commands.Cog):
             await discord_call(lambda: member.move_to(channel))
         except discord.HTTPException as e:
             log.warning("could not move %s into new room: %s", member.id, e)
+            if isinstance(e, discord.Forbidden):
+                await self.bot.report_error(e, "voice_rooms.move_member")
             self.store.delete_room(room.id)
             await self._discard(channel)
             return
@@ -231,6 +243,7 @@ class VoiceRooms(commands.Cog):
             lambda: guild.create_voice_channel(
                 name,
                 category=category,
+                overwrites=category.overwrites,
                 user_limit=self.cfg.voice_default_user_limit,
             )
         )
@@ -253,15 +266,25 @@ class VoiceRooms(commands.Cog):
             return
         self._seed_categories()
         for mode in self._modes():
-            entrance_id = self.cfg.modes[mode].entrance_channel_id
+            all_entrances = {
+                mc.entrance_channel_id for mc in self.cfg.modes.values()
+            }
+            tracked_elsewhere = {
+                r.id for r in self.store.list_rooms() if r.mode != mode
+            }
             live: dict[int, discord.VoiceChannel] = {}
             for cid in self.store.list_categories(mode):
                 cat = guild.get_channel(cid)
                 if not isinstance(cat, discord.CategoryChannel):
                     continue
                 for vc in cat.voice_channels:
-                    if vc.id != entrance_id:
-                        live[vc.id] = vc
+                    live[vc.id] = vc
+            counts = exclude_unmanaged(
+                {i: len(v.members) for i, v in live.items()},
+                all_entrances,
+                tracked_elsewhere,
+            )
+            live = {i: v for i, v in live.items() if i in counts}
             tracked = {r.id: r for r in self.store.list_rooms(mode)}
             result = reconcile(
                 tracked.keys(), {i: len(v.members) for i, v in live.items()}
