@@ -1,6 +1,6 @@
 import pytest
 
-from zaizai.board_sync import PageState, plan_page_edit, sync_board
+from zaizai.board_sync import PageState, modes_for_deleted, plan_page_edit, sync_board
 from zaizai.models import Entry, Mode
 from zaizai.store import Store
 
@@ -136,3 +136,16 @@ def test_plan_page_edit_changed_content_restamps():
     assert plan_page_edit(PageState("old", 50.0), "new", 100.0) == PageState(
         "new", 100.0
     )
+
+
+def test_modes_for_deleted_matches_board_ids():
+    ids = {Mode.RANKED: [50, 51], Mode.MATCH: [60]}
+    assert modes_for_deleted({51}, ids, set()) == {Mode.RANKED}
+    assert modes_for_deleted({51, 60}, ids, set()) == {Mode.RANKED, Mode.MATCH}
+
+
+def test_modes_for_deleted_ignores_unrelated_and_self_deleted():
+    ids = {Mode.RANKED: [50, 51]}
+    assert modes_for_deleted({999}, ids, set()) == set()
+    assert modes_for_deleted({51}, ids, {51}) == set()
+    assert modes_for_deleted(set(), ids, set()) == set()

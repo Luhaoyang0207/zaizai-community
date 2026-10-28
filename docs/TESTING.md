@@ -41,7 +41,8 @@ Needs a real test Discord server and a separate test bot token; cannot be automa
 - [ ] 点"查看卡片"跳到卡片；点房间按钮跳到语音房间
 - [ ] 有人进出房间后 5 秒内（`board.refresh_debounce_sec`）按钮上的人数更新
 - [ ] 房间空了 -> 条目消失；没有条目时显示 `board.empty_text`
-- [ ] 手动删掉总表消息 -> 下次刷新自动重发，不留重复消息
+- [ ] 手动删除总表消息 → 几秒内自动重发（无需等内容变化），不留重复消息
+- [ ] 总表分页变少（条目减少）时机器人删掉多余分页 -> 不会因此再触发重发或刷新循环
 - [ ] 手动删掉卡片 -> 机器人不报错
 - [ ] 条目超过每页上限（可临时把 `board.max_entries_per_message` 调成 2）-> 自动分页，标题显示 "i/n"；条目变少后多余的分页消息被删
 - [ ] 30 分钟超时（可临时把 `board.entry_timeout_min` 调成 1）-> 约 1~2 分钟内条目被清掉，卡片保留

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from collections.abc import Collection, Mapping, Sequence
 from typing import Protocol
 
 from zaizai.models import Entry, Mode
@@ -40,6 +41,16 @@ def plan_page_edit(
     if cached is not None and cached.fingerprint == fingerprint:
         return None
     return PageState(fingerprint, now)
+
+
+def modes_for_deleted(
+    deleted_ids: Collection[int],
+    board_ids: Mapping[Mode, Sequence[int]],
+    self_deleted: Collection[int],
+) -> set[Mode]:
+    """Modes whose stored board messages were deleted by someone else."""
+    foreign = set(deleted_ids) - set(self_deleted)
+    return {mode for mode, ids in board_ids.items() if foreign.intersection(ids)}
 
 
 async def sync_board(

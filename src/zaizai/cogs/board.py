@@ -11,7 +11,7 @@ import discord
 from discord.ext import commands, tasks
 
 from ..asyncutil import Debouncer
-from ..board_sync import PageState, plan_page_edit, sync_board
+from ..board_sync import PageState, modes_for_deleted, plan_page_edit, sync_board
 from ..board_view import (
     RoomInfo,
     build_board_view,
@@ -46,9 +46,11 @@ class DiscordBoardGateway:
         empty_text: str,
         show_count: bool,
         cache: dict[int, PageState],
+        self_deleted: set[int],
     ) -> None:
         self._channel = channel
         self._cache = cache
+        self._self_deleted = self_deleted
         self._guild_id = guild_id
         self._rooms = rooms
         self._total_pages = total_pages
@@ -98,9 +100,8 @@ class DiscordBoardGateway:
     ) -> bool:
         """Edit only when the content changed; False if the message is gone.
 
-        A skipped edit does not check that the message still exists, so a
-        manually deleted board page is re-sent on the next content change
-        (or after a restart, when the cache is empty).
+        A skipped edit does not check that the message still exists; manual
+        deletes are caught by the cog's raw delete listeners instead.
         """
         state = plan_page_edit(
             self._cache.get(message_id),
@@ -125,6 +126,8 @@ class DiscordBoardGateway:
 
     async def delete(self, message_id: int) -> None:
         self._cache.pop(message_id, None)
+        # Our own delete must not look like a manual one (raw delete listener).
+        self._self_deleted.add(message_id)
         try:
             await discord_call(self._channel.get_partial_message(message_id).delete)
         except discord.NotFound:
@@ -141,6 +144,9 @@ class Board(commands.Cog):
         self._ready_done = False
         # What each board message shows now (in memory; empty after restart).
         self._page_cache: dict[int, PageState] = {}
+        # Board messages the bot deleted itself (shrinking pages); their raw
+        # delete events are ignored once.
+        self._self_deleted: set[int] = set()
 
     def _modes(self) -> list[Mode]:
         """In-scope modes with a command; a disabled mode can never have entries."""
@@ -174,6 +180,32 @@ class Board(commands.Cog):
     @commands.Cog.listener()
     async def on_board_dirty(self, mode: Mode) -> None:
         if mode in self._modes():
+            self._debouncer.trigger(mode)
+
+    @commands.Cog.listener()
+    async def on_raw_message_delete(
+        self, payload: discord.RawMessageDeleteEvent
+    ) -> None:
+        self._on_board_messages_deleted(payload.channel_id, {payload.message_id})
+
+    @commands.Cog.listener()
+    async def on_raw_bulk_message_delete(
+        self, payload: discord.RawBulkMessageDeleteEvent
+    ) -> None:
+        self._on_board_messages_deleted(payload.channel_id, set(payload.message_ids))
+
+    def _on_board_messages_deleted(self, channel_id: int, ids: set[int]) -> None:
+        """A board page deleted by hand is re-sent: the next sync's edit gets
+        NotFound and sends a replacement."""
+        if not self.cfg.board_channel_id or channel_id != self.cfg.board_channel_id:
+            return
+        board_ids = {m: self.store.get_board_message_ids(m) for m in self._modes()}
+        affected = modes_for_deleted(ids, board_ids, self._self_deleted)
+        self._self_deleted.difference_update(ids)
+        for message_id in ids:
+            self._page_cache.pop(message_id, None)
+        for mode in affected:
+            log.info("board message deleted by hand; re-sending %s board", mode.value)
             self._debouncer.trigger(mode)
 
     @commands.Cog.listener()
@@ -231,6 +263,7 @@ class Board(commands.Cog):
             empty_text=self.cfg.board_empty_text,
             show_count=self.cfg.board_show_member_count,
             cache=self._page_cache,
+            self_deleted=self._self_deleted,
         )
         await sync_board(self.store, gateway, mode, pages)
 
