@@ -84,4 +84,5 @@ Needs a real test Discord server and a separate test bot token; cannot be automa
 自动化测试已通过，但以上各节的人工清单**全部尚未在测试服务器过一遍**（保持未勾选）。上线前待办：
 - [ ] 用测试机器人 + 测试服务器（README「本地测试」）把本文件全部清单走一遍并勾选
 - [ ] 正式服填好 `config/settings.toml` 的频道 ID，确认受管分类专用于机器人
-- [ ] 正式服确认机器人权限（管理频道、管理身份组、移动成员、管理消息等）
+- [ ] 正式服确认机器人权限（管理频道、移动成员、管理消息等；管理身份组为有条件需要：部分服务器设置下锁房写权限覆盖会要求，缺少时点锁会失败）
+- [ ] VPS 上 `./data` 对容器用户可写（`mkdir -p data && sudo chown -R 1000:1000 data`，或设 `ZAIZAI_UID`/`ZAIZAI_GID`），`./config` 可读，且 `.env` 已存在

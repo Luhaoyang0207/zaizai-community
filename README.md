@@ -16,7 +16,7 @@
 3. OAuth2 → URL Generator，scope 选 `bot` 和 `applications.commands`，权限勾选：
    - View Channels、Connect（看见并连接语音房间）
    - **Manage Channels**（建/删语音房间、复制分类；锁房按钮改的是房间的 connect 权限覆盖，多数设置下这一项就够）
-   - **Manage Roles**（锁房按钮写权限覆盖时，部分服务器设置会要求；缺少时点锁会失败并在管理频道提示）
+   - **Manage Roles / 管理身份组**（有条件需要：锁房按钮写权限覆盖时，部分服务器设置会要求；缺少时点锁会失败并在管理频道提示）
    - Move Members（把玩家移入新建的房间）
    - Send Messages、Embed Links、Read Message History（发卡片、总表、面板）
    - Manage Messages（仅当开启 `card.delete_original` 删除原消息时需要）
@@ -33,6 +33,16 @@
 ## 3. 启动
 
 线上（VPS）：
+
+首次需要：先 `cp .env.example .env` 并填入令牌——`.env` 不存在时 `docker compose up` 会报 "env file not found"。
+
+Linux 上容器以 uid 1000 运行，`./data` 必须对它可写，`./config` 必须可读。一次性设置：
+
+```
+mkdir -p data && sudo chown -R 1000:1000 data
+```
+
+或者不改属主，在 `.env` 里设 `ZAIZAI_UID=$(id -u)`、`ZAIZAI_GID=$(id -g)` 的实际数值（宿主用户的 `id -u` / `id -g`）。否则 SQLite 打不开，容器会因 `restart: unless-stopped` 反复重启。
 
 ```
 docker compose up -d --build

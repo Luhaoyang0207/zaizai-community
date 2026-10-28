@@ -4,6 +4,7 @@ services:
   bot-main:
     build: .
     env_file: ${ZAIZAI_ENV_FILE:-.env}
+    user: "${ZAIZAI_UID:-1000}:${ZAIZAI_GID:-1000}"  # 须能读写 ./data（Linux 上见 README）
     environment:
       ZAIZAI_CONFIG: /app/config/${ZAIZAI_CONFIG_FILE:-settings.toml}
       ZAIZAI_DB_PATH: /app/data/${ZAIZAI_DB_FILE:-zaizai.db}
@@ -18,6 +19,7 @@ services:
   # bot-ranked:
   #   build: .
   #   env_file: .env.ranked          # 里面放另一个机器人的 DISCORD_TOKEN
+  #   user: "${ZAIZAI_UID:-1000}:${ZAIZAI_GID:-1000}"
   #   environment:
   #     ZAIZAI_CONFIG: /app/config/settings.ranked.toml
   #     ZAIZAI_DB_PATH: /app/data/ranked.db
