@@ -50,3 +50,7 @@ Rejected: 旧版 Embed + ActionRow（最多 25 个按钮，按钮不能和条目
 - 锁房同时把房间里"允许连接"的身份组覆盖改为拒绝；解锁时按所在分类恢复这些身份组的 connect。
 - 第一版只实现 `card.after_entry_end=keep`、`voice.reuse_empty_rooms=false`、`panel.owner_permissions=lock_only`、`panel.button_refresh/crosshair=false`；填其他值启动时报错，而不是悄悄不生效。
 - 对账时，已记录但被移出受管分类的房间（频道仍在）继续记录，空了照样删除，不变成孤儿。
+
+## D-012 — 2026-10-28 — 匹配模式的内部名称由 `match` 改为 `unrated`
+配置节 `[modes.unrated]`、`commands.unrated`、`voice.name_template.unrated`、`modules.mode_scope` 中的 `"unrated"`，代码里是 `Mode.UNRATED`。
+Why: 用户要求。玩家看到的仍是"匹配"，命令仍是 `!pp`。尚未部署，没有旧数据需要迁移（若已有 SQLite 数据，旧记录里的 `match` 不再被识别，删掉数据文件重建即可）。

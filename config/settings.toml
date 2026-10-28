@@ -10,7 +10,7 @@ entrance_channel_id = 0  # 部署时填写
 lfg_channel_id = 0       # 部署时填写
 category_id = 0          # 部署时填写
 
-[modes.match]
+[modes.unrated]
 entrance_channel_id = 0  # 部署时填写
 lfg_channel_id = 0       # 部署时填写
 category_id = 0          # 部署时填写
@@ -22,7 +22,7 @@ category_id = 0          # 部署时填写
 
 [commands]
 ranked = "pw"
-match = "pp"
+unrated = "pp"
 other = ""
 accept_fullwidth = true
 need_voice = true
@@ -56,7 +56,7 @@ create_queue_interval_ms = 500
 
 [voice.name_template]
 ranked = "排位房 {n}"
-match = "匹配房 {n}"
+unrated = "匹配房 {n}"
 other = "其他房 {n}"
 
 [panel]
@@ -71,4 +71,4 @@ help_text = "在此聊天发送组队命令即可发布组队信息；点「组�
 
 [modules]
 enabled = ["voice_rooms", "lfg", "board", "panel", "admin"]
-mode_scope = ["ranked", "match", "other"]
+mode_scope = ["ranked", "unrated", "other"]

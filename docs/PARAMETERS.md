@@ -12,7 +12,7 @@ _最后更新：2026-10-28（已加入房间控制面板、房间空了直接删
 | 键名 | 说明 | 当前值 | 状态 |
 |---|---|---|---|
 | `commands.ranked` | 排位组队频道的命令 | `!pw` | 已确认 |
-| `commands.match` | 匹配组队频道的命令 | `!pp` | 已确认 |
+| `commands.unrated` | 匹配组队频道的命令 | `!pp` | 已确认 |
 | `commands.other` | 其他游戏频道的命令（为空时该模式不发总表） | 空（= 关闭，该模式没有命令也不发总表） | 待确认 |
 | `commands.accept_fullwidth` | 是否同时识别全角 `！` | `true` | 已确认 |
 | `commands.need_voice` | 不在语音房间时是否拒绝并提示 | `true` | 已确认 |
@@ -84,13 +84,13 @@ _最后更新：2026-10-28（已加入房间控制面板、房间空了直接删
 | `modes.ranked.entrance_channel_id` | 排位：点击加入即建房的入口语音频道 | `0`（部署时填写） | 待填 |
 | `modes.ranked.lfg_channel_id` | 排位：组队文字频道 | `0`（部署时填写） | 待填 |
 | `modes.ranked.category_id` | 排位：临时房间所在的首个分类 | `0`（部署时填写） | 待填 |
-| `modes.match.entrance_channel_id` | 匹配：入口语音频道 | `0`（部署时填写） | 待填 |
-| `modes.match.lfg_channel_id` | 匹配：组队文字频道 | `0`（部署时填写） | 待填 |
-| `modes.match.category_id` | 匹配：临时房间所在的首个分类 | `0`（部署时填写） | 待填 |
+| `modes.unrated.entrance_channel_id` | 匹配：入口语音频道 | `0`（部署时填写） | 待填 |
+| `modes.unrated.lfg_channel_id` | 匹配：组队文字频道 | `0`（部署时填写） | 待填 |
+| `modes.unrated.category_id` | 匹配：临时房间所在的首个分类 | `0`（部署时填写） | 待填 |
 | `modes.other.entrance_channel_id` | 其他游戏：入口语音频道 | `0`（部署时填写） | 待填 |
 | `modes.other.lfg_channel_id` | 其他游戏：组队文字频道 | `0`（部署时填写） | 待填 |
 | `modes.other.category_id` | 其他游戏：临时房间所在的首个分类 | `0`（部署时填写） | 待填 |
 
-> 配置文件里命令不带 `!`（如 `commands.ranked = "pw"`），空字符串表示该模式命令关闭；`voice.name_template` 在配置文件里是一张表（`ranked` / `match` / `other` 各一个模板）。
+> 配置文件里命令不带 `!`（如 `commands.ranked = "pw"`），空字符串表示该模式命令关闭；`voice.name_template` 在配置文件里是一张表（`ranked` / `unrated` / `other` 各一个模板）。
 
 > 说明：同一玩家的发命令间隔，由 Discord 频道自带的慢速模式（slowmode）控制，机器人不再单独限制。需求文字只按 Discord 的字数上限自动截断。

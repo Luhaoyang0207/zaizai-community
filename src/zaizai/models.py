@@ -4,7 +4,7 @@ from enum import Enum
 
 class Mode(str, Enum):
     RANKED = "ranked"
-    MATCH = "match"
+    UNRATED = "unrated"
     OTHER = "other"
 
 

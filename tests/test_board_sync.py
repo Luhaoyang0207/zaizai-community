@@ -139,9 +139,9 @@ def test_plan_page_edit_changed_content_restamps():
 
 
 def test_modes_for_deleted_matches_board_ids():
-    ids = {Mode.RANKED: [50, 51], Mode.MATCH: [60]}
+    ids = {Mode.RANKED: [50, 51], Mode.UNRATED: [60]}
     assert modes_for_deleted({51}, ids, set()) == {Mode.RANKED}
-    assert modes_for_deleted({51, 60}, ids, set()) == {Mode.RANKED, Mode.MATCH}
+    assert modes_for_deleted({51, 60}, ids, set()) == {Mode.RANKED, Mode.UNRATED}
 
 
 def test_modes_for_deleted_ignores_unrelated_and_self_deleted():

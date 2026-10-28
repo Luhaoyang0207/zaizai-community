@@ -20,7 +20,7 @@ from discord import ui
 
 from .models import Entry, Mode
 
-MODE_NAMES = {Mode.RANKED: "排位", Mode.MATCH: "匹配", Mode.OTHER: "其他游戏"}
+MODE_NAMES = {Mode.RANKED: "排位", Mode.UNRATED: "匹配", Mode.OTHER: "其他游戏"}
 DEFAULT_REQUIREMENT = "组队中"
 
 # Discord limits for a Components V2 message (D-010).

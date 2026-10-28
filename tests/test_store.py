@@ -47,22 +47,22 @@ def test_delete_entry_by_room(store):
 
 def test_room_roundtrip_and_updates(store):
     store.add_room(_room(100, Mode.RANKED))
-    store.add_room(_room(101, Mode.MATCH))
+    store.add_room(_room(101, Mode.UNRATED))
     store.set_locked(100, True)
     store.set_panel_message(100, 999)
     r = store.get_room(100)
     assert r.locked is True and r.panel_message_id == 999 and r.mode is Mode.RANKED
     assert [x.id for x in store.list_rooms()] == [100, 101]
-    assert [x.id for x in store.list_rooms(Mode.MATCH)] == [101]
+    assert [x.id for x in store.list_rooms(Mode.UNRATED)] == [101]
 
 
 def test_list_entries_filters_by_mode(store):
     store.add_room(_room(100, Mode.RANKED))
-    store.add_room(_room(101, Mode.MATCH))
+    store.add_room(_room(101, Mode.UNRATED))
     store.upsert_entry(100, Mode.RANKED, "r", 1, 2, 3, now=1.0)
-    store.upsert_entry(101, Mode.MATCH, "m", 1, 2, 3, now=1.0)
+    store.upsert_entry(101, Mode.UNRATED, "m", 1, 2, 3, now=1.0)
     assert [e.text for e in store.list_entries(Mode.RANKED)] == ["r"]
-    assert [e.text for e in store.list_entries(Mode.MATCH)] == ["m"]
+    assert [e.text for e in store.list_entries(Mode.UNRATED)] == ["m"]
     assert store.list_entries(Mode.OTHER) == []
 
 
@@ -72,7 +72,7 @@ def test_board_message_ids_roundtrip(store):
     assert store.get_board_message_ids(Mode.RANKED) == [30, 10, 20]
     store.set_board_message_ids(Mode.RANKED, [5])
     assert store.get_board_message_ids(Mode.RANKED) == [5]
-    assert store.get_board_message_ids(Mode.MATCH) == []
+    assert store.get_board_message_ids(Mode.UNRATED) == []
 
 
 def test_state_survives_reopen(tmp_path):
@@ -110,4 +110,4 @@ def test_categories_keep_insertion_order(store):
     for c in (30, 10, 20, 10):
         store.add_category(Mode.RANKED, c)
     assert store.list_categories(Mode.RANKED) == [30, 10, 20]
-    assert store.list_categories(Mode.MATCH) == []
+    assert store.list_categories(Mode.UNRATED) == []

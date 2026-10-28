@@ -9,6 +9,7 @@ _Last updated: 2026-10-28 by Claude_
 - 实现：语音房间（建/删/对账/分类满自动新开）、`!pw`/`!pp` 组队命令与卡片、实时总表（Components V2，分页、超时清理）、房间面板（锁房、组队已满、`/panel`）、管理指令（`/motto`、`/ad`、`/setting`），配置由 `config/settings.toml` 加载。
 - Task 15：`Dockerfile`（python:3.12-slim，非 root）、`docker-compose.yml`（`bot-main`，可切换 dev 配置，含拆分服务注释示例）、`.env.example`、`.dockerignore`、`config/settings.dev.toml.example`、README 运行说明、`docs/TESTING.md` 增加「上线前」。
 - 验证：`docker compose build` 成功；Python 3.12 容器内 `python -m pytest` 114 通过；镜像内能 import `zaizai.bot`、`zaizai.cogs.board`、`zaizai.cogs.panel`。未启动机器人（无令牌、未连 Discord）。
+- 匹配模式内部名称改为 `unrated`（配置节 `[modes.unrated]`，见 D-012）；玩家看到的名称和 `!pp` 命令不变。
 - 文档：新增 D-011，更新 TODO。
 - 最终审查修复：总表只在内容变化时编辑（不再每次 fetch、`更新于`=内容最后变化时间；手动删除的总表消息由删除事件触发几秒内重发）、成员进出只在有条目时刷新总表；每次 on_ready（含重连）都对账；`card.show_*` 生效、未实现的配置值启动报错；锁房同时拒绝允许连接的身份组；斜杠指令错误不再重复上报；移出分类的房间继续被记录；README 补充拆分注意事项。
 

@@ -1,7 +1,7 @@
 from zaizai.commands import LfgDecision, ParsedCommand, decide_lfg, parse_lfg_command
 from zaizai.models import Mode
 
-CMDS = {"pw": Mode.RANKED, "pp": Mode.MATCH}
+CMDS = {"pw": Mode.RANKED, "pp": Mode.UNRATED}
 
 
 def test_basic():
@@ -34,7 +34,7 @@ def test_not_at_start():
 
 
 def test_leading_whitespace():
-    assert parse_lfg_command("  !pp x", CMDS) == ParsedCommand(Mode.MATCH, "x")
+    assert parse_lfg_command("  !pp x", CMDS) == ParsedCommand(Mode.UNRATED, "x")
 
 
 def test_multiline_kept():
@@ -55,14 +55,14 @@ def test_decide_none():
 
 def test_decide_wrong_channel():
     p = ParsedCommand(Mode.RANKED, "x")
-    assert decide_lfg(p, Mode.MATCH, Mode.RANKED) is LfgDecision.IGNORE
+    assert decide_lfg(p, Mode.UNRATED, Mode.RANKED) is LfgDecision.IGNORE
     assert decide_lfg(p, None, Mode.RANKED) is LfgDecision.IGNORE
 
 
 def test_decide_need_voice():
     p = ParsedCommand(Mode.RANKED, "x")
     assert decide_lfg(p, Mode.RANKED, None) is LfgDecision.NEED_VOICE
-    assert decide_lfg(p, Mode.RANKED, Mode.MATCH) is LfgDecision.NEED_VOICE
+    assert decide_lfg(p, Mode.RANKED, Mode.UNRATED) is LfgDecision.NEED_VOICE
 
 
 def test_decide_ok():

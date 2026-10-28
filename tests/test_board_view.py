@@ -67,7 +67,7 @@ def test_room_button_label():
 
 def test_header_text():
     assert header_text(Mode.RANKED, 1000.9, 0, 1) == "**排位** · 更新于 <t:1000:R>"
-    assert header_text(Mode.MATCH, 1000, 1, 3) == "**匹配** · 更新于 <t:1000:R> · 2/3"
+    assert header_text(Mode.UNRATED, 1000, 1, 3) == "**匹配** · 更新于 <t:1000:R> · 2/3"
     assert header_text(Mode.OTHER, 1000, 0, 1).startswith("**其他游戏**")
 
 

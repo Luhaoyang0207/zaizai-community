@@ -27,9 +27,9 @@ def test_unknown_cog_name_raises(cfg):
 
 
 def test_mode_scope_limits_modes(cfg):
-    scoped = replace(cfg, modules_mode_scope=(Mode.MATCH,))
+    scoped = replace(cfg, modules_mode_scope=(Mode.UNRATED,))
     assert not mode_in_scope(scoped, Mode.RANKED)
-    assert mode_in_scope(scoped, Mode.MATCH)
+    assert mode_in_scope(scoped, Mode.UNRATED)
 
 
 def test_error_notifier_notifies_once_per_key():

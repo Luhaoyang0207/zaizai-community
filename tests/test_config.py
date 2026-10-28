@@ -38,10 +38,10 @@ def test_load_config_values():
     assert cfg.voice_reuse_empty_rooms is False
     assert cfg.card_after_entry_end == "keep"
     assert cfg.modes[Mode.RANKED].command == "pw"
-    assert cfg.modes[Mode.MATCH].command == "pp"
+    assert cfg.modes[Mode.UNRATED].command == "pp"
     assert cfg.modes[Mode.OTHER].command is None
     assert cfg.voice_name_template[Mode.RANKED] == "排位房 {n}"
-    assert cfg.modes[Mode.MATCH].name_template == "匹配房 {n}"
+    assert cfg.modes[Mode.UNRATED].name_template == "匹配房 {n}"
     assert cfg.modules_enabled == ("voice_rooms", "lfg", "board", "panel", "admin")
 
 
@@ -50,8 +50,8 @@ def test_mode_in_scope():
     assert mode_in_scope(cfg, Mode.RANKED)
     from dataclasses import replace
 
-    narrow = replace(cfg, modules_mode_scope=(Mode.MATCH,))
-    assert mode_in_scope(narrow, Mode.MATCH)
+    narrow = replace(cfg, modules_mode_scope=(Mode.UNRATED,))
+    assert mode_in_scope(narrow, Mode.UNRATED)
     assert not mode_in_scope(narrow, Mode.RANKED)
 
 
