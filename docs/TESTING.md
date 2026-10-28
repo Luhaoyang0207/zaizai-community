@@ -7,6 +7,7 @@ Needs a real test Discord server and a separate test bot token; cannot be automa
 - [ ] 进入入口房间 -> 机器人建房并把你移入，你是房主；面板由 panel 模块发出（需 panel 模块启用）
 - [ ] 房间名按该模式的 name_template 取最小未用编号
 - [ ] 分类满 45（`voice.category_max_channels`）-> 自动新开分类（名称为原分类名 + " 2"，权限复制），房间建在新分类
+- [ ] `category_ids` 写两个分类：第一个满 45 后房间建到第二个；两个都满才自动新开分类
 - [ ] 房间空 30 秒后被删除，总表条目立即消失（`board.remove_when_room_empty`）
 - [ ] 房间变空后 30 秒内重新进入 -> 房间不被删
 - [ ] 进入入口后立刻离开 -> 新建的房间被删除，不留空房间

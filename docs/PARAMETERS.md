@@ -83,13 +83,13 @@ _最后更新：2026-10-28（已加入房间控制面板、房间空了直接删
 | `guild.board_channel_id` | 信息组队总表所在频道 | `0`（部署时填写） | 待填 |
 | `modes.ranked.entrance_channel_id` | 排位：点击加入即建房的入口语音频道 | `0`（部署时填写） | 待填 |
 | `modes.ranked.lfg_channel_id` | 排位：组队文字频道 | `0`（部署时填写） | 待填 |
-| `modes.ranked.category_id` | 排位：临时房间所在的首个分类 | `0`（部署时填写） | 待填 |
+| `modes.ranked.category_ids` | 排位：临时房间所在的分类（可写多个，按顺序使用；都满了机器人自动新开） | `[]`（部署时填写） | 待填 |
 | `modes.unrated.entrance_channel_id` | 匹配：入口语音频道 | `0`（部署时填写） | 待填 |
 | `modes.unrated.lfg_channel_id` | 匹配：组队文字频道 | `0`（部署时填写） | 待填 |
-| `modes.unrated.category_id` | 匹配：临时房间所在的首个分类 | `0`（部署时填写） | 待填 |
+| `modes.unrated.category_ids` | 匹配：临时房间所在的分类（可写多个，按顺序使用；都满了机器人自动新开） | `[]`（部署时填写） | 待填 |
 | `modes.other.entrance_channel_id` | 其他游戏：入口语音频道 | `0`（部署时填写） | 待填 |
 | `modes.other.lfg_channel_id` | 其他游戏：组队文字频道 | `0`（部署时填写） | 待填 |
-| `modes.other.category_id` | 其他游戏：临时房间所在的首个分类 | `0`（部署时填写） | 待填 |
+| `modes.other.category_ids` | 其他游戏：临时房间所在的分类（可写多个，按顺序使用；都满了机器人自动新开） | `[]`（部署时填写） | 待填 |
 
 > 配置文件里命令不带 `!`（如 `commands.ranked = "pw"`），空字符串表示该模式命令关闭；`voice.name_template` 在配置文件里是一张表（`ranked` / `unrated` / `other` 各一个模板）。
 

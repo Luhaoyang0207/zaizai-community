@@ -1,4 +1,9 @@
-from zaizai.cogs.voice_rooms import classify_transition, exclude_unmanaged, overflow_category_name
+from zaizai.cogs.voice_rooms import (
+    classify_transition,
+    exclude_unmanaged,
+    ordered_categories,
+    overflow_category_name,
+)
 
 ENT = {10, 11}
 ROOMS = {100, 101}
@@ -46,3 +51,12 @@ def test_shared_category_other_entrance_and_foreign_room_excluded():
     live = {10: 0, 11: 0, 100: 2, 101: 0, 200: 3}
     out = exclude_unmanaged(live, entrance_ids={10, 11}, tracked_elsewhere={200})
     assert out == {100: 2, 101: 0}
+
+
+def test_ordered_categories_config_first_then_overflow():
+    # store order reflects insertion; overflow 99 was created by the bot
+    assert ordered_categories([20, 10], [10, 99, 20]) == [20, 10, 99]
+
+
+def test_ordered_categories_no_config():
+    assert ordered_categories([], [5, 6]) == [5, 6]

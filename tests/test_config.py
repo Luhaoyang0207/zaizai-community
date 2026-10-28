@@ -76,3 +76,31 @@ def _write_variant(tmp_path, old: str, new: str) -> Path:
 def test_load_config_rejects_unimplemented_values(tmp_path, old, new, key):
     with pytest.raises(ValueError, match=re.escape(key)):
         load_config(_write_variant(tmp_path, old, new))
+
+
+def _with_other_categories(tmp_path, line: str) -> Path:
+    text = SETTINGS.read_text(encoding="utf-8")
+    new, n = re.subn(
+        r"(\[modes\.other\]\n(?:[^\[\n].*\n)*?)category_ids = .*\n",
+        lambda m: m.group(1) + line + "\n",
+        text,
+    )
+    assert n == 1
+    path = tmp_path / "settings.toml"
+    path.write_text(new, encoding="utf-8")
+    return path
+
+
+def test_category_ids_list_keeps_order_and_drops_zero(tmp_path):
+    cfg = load_config(_with_other_categories(tmp_path, "category_ids = [30, 0, 10, 20]"))
+    assert cfg.modes[Mode.OTHER].category_ids == (30, 10, 20)
+
+
+def test_old_single_category_id_still_works(tmp_path):
+    cfg = load_config(_with_other_categories(tmp_path, "category_id = 42"))
+    assert cfg.modes[Mode.OTHER].category_ids == (42,)
+
+
+def test_old_single_category_id_zero_means_none(tmp_path):
+    cfg = load_config(_with_other_categories(tmp_path, "category_id = 0"))
+    assert cfg.modes[Mode.OTHER].category_ids == ()

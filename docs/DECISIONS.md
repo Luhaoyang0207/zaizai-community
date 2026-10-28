@@ -54,3 +54,7 @@ Rejected: 旧版 Embed + ActionRow（最多 25 个按钮，按钮不能和条目
 ## D-012 — 2026-10-28 — 匹配模式的内部名称由 `match` 改为 `unrated`
 配置节 `[modes.unrated]`、`commands.unrated`、`voice.name_template.unrated`、`modules.mode_scope` 中的 `"unrated"`，代码里是 `Mode.UNRATED`。
 Why: 用户要求。玩家看到的仍是"匹配"，命令仍是 `!pp`。尚未部署，没有旧数据需要迁移（若已有 SQLite 数据，旧记录里的 `match` 不再被识别，删掉数据文件重建即可）。
+
+## D-013 — 2026-10-28 — 每个模式可配置多个分类：`category_ids = [...]`
+按书写顺序使用，前面的满了用下一个；全部满了机器人自动新开分类（以第一个为模板）。之后在配置里加的分类，重启后也会被使用。旧写法 `category_id = N` 仍可用。
+Why: 用户要求可以提前手动建好多个分类。

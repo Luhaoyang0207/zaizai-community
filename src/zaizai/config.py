@@ -18,7 +18,7 @@ class ModeConfig:
     command: str | None  # None = disabled
     entrance_channel_id: int
     lfg_channel_id: int
-    category_id: int
+    category_ids: tuple[int, ...]  # in order of use; 0 entries dropped
     name_template: str
 
 
@@ -90,6 +90,15 @@ def _check_fixed(d: dict) -> None:
             )
 
 
+def _category_ids(m: dict) -> tuple[int, ...]:
+    """Read `category_ids = [...]`; the old single `category_id = N` still works."""
+    if "category_ids" in m:
+        raw = m["category_ids"]
+    else:
+        raw = [m.get("category_id", 0)]
+    return tuple(int(c) for c in raw if c)
+
+
 def load_config(path: str | Path) -> Config:
     with open(path, "rb") as f:
         d = tomllib.load(f)
@@ -106,7 +115,7 @@ def load_config(path: str | Path) -> Config:
             command=commands[mode.value] or None,
             entrance_channel_id=m["entrance_channel_id"],
             lfg_channel_id=m["lfg_channel_id"],
-            category_id=m["category_id"],
+            category_ids=_category_ids(m),
             name_template=voice["name_template"][mode.value],
         )
 

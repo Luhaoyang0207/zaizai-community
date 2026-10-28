@@ -11,17 +11,17 @@ board_channel_id = 0  # 部署时填写：信息组队总表所在频道
 [modes.ranked]
 entrance_channel_id = 0  # 部署时填写
 lfg_channel_id = 0       # 部署时填写
-category_id = 0          # 部署时填写
+category_ids = []          # 部署时填写，可写多个：[111, 222]
 
 [modes.unrated]
 entrance_channel_id = 0  # 部署时填写
 lfg_channel_id = 0       # 部署时填写
-category_id = 0          # 部署时填写
+category_ids = []          # 部署时填写，可写多个：[111, 222]
 
 [modes.other]
 entrance_channel_id = 0  # 部署时填写
 lfg_channel_id = 0       # 部署时填写
-category_id = 0          # 部署时填写
+category_ids = []          # 部署时填写，可写多个：[111, 222]
 
 [commands]
 ranked = "pw"

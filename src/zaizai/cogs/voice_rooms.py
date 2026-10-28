@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from collections.abc import Collection, Mapping
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
 
 import discord
@@ -59,6 +59,13 @@ def overflow_category_name(base_name: str, existing_count: int) -> str:
     return f"{base_name} {existing_count + 1}"
 
 
+def ordered_categories(configured: Sequence[int], stored: Sequence[int]) -> list[int]:
+    """Categories in order of use: the configured ones first (as listed),
+    then overflow categories the bot created itself."""
+    seen = set(configured)
+    return list(configured) + [c for c in stored if c not in seen]
+
+
 class VoiceRooms(commands.Cog):
     def __init__(self, bot) -> None:
         self.bot = bot
@@ -80,10 +87,16 @@ class VoiceRooms(commands.Cog):
         }
 
     def _seed_categories(self) -> None:
+        # Every configured category is recorded (re-adding is a no-op), so
+        # categories added to the config later are picked up on restart.
         for m in self._modes():
-            cat = self.cfg.modes[m].category_id
-            if cat != 0 and not self.store.list_categories(m):
+            for cat in self.cfg.modes[m].category_ids:
                 self.store.add_category(m, cat)
+
+    def _categories(self, mode: Mode) -> list[int]:
+        return ordered_categories(
+            self.cfg.modes[mode].category_ids, self.store.list_categories(mode)
+        )
 
     async def cog_load(self) -> None:
         self._seed_categories()
@@ -221,7 +234,7 @@ class VoiceRooms(commands.Cog):
         self, guild: discord.Guild, mode: Mode
     ) -> discord.VoiceChannel | None:
         """Runs inside the serial queue: pick/create category, name and create."""
-        cats = [guild.get_channel(cid) for cid in self.store.list_categories(mode)]
+        cats = [guild.get_channel(cid) for cid in self._categories(mode)]
         cats = [c for c in cats if isinstance(c, discord.CategoryChannel)]
         if not cats:
             log.error("no usable category for mode %s", mode.value)
@@ -278,7 +291,7 @@ class VoiceRooms(commands.Cog):
                 r.id for r in self.store.list_rooms() if r.mode != mode
             }
             live: dict[int, discord.VoiceChannel] = {}
-            for cid in self.store.list_categories(mode):
+            for cid in self._categories(mode):
                 cat = guild.get_channel(cid)
                 if not isinstance(cat, discord.CategoryChannel):
                     continue
