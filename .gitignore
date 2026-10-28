@@ -1,0 +1,24 @@
+# Office lock / temp files
+~$*
+*.tmp
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Node / Python (in case either is used later)
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+dist/
+build/
