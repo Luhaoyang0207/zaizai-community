@@ -66,3 +66,15 @@ Needs a real test Discord server and a separate test bot token; cannot be automa
 - [ ] `panel.enabled=false` -> 建房不发面板，`/panel` 提示"面板功能已关闭"
 
 状态：未在测试服务器验证。
+
+## 管理指令 (admin commands)
+
+- [ ] `/motto 文字` -> 仅自己可见的确认；下一张卡片页脚立即变成该文字；`/motto clear` 后页脚消失（即使配置里有默认页脚）
+- [ ] `/ad 文字` -> 下一张卡片出现广告位文字；`/ad clear` 后广告消失；`card.ad_enabled=false` 时即使设了文字也不显示
+- [ ] `/setting delete_original on` -> 之后发组队信息，原消息被删；`off` 后不删
+- [ ] `/setting delete_original on 频道:#某频道` 只对该频道生效，且优先于全局设置
+- [ ] 文字超长（页脚 > 2048、广告 > 1024）-> 提示太长，设置不变
+- [ ] 重启机器人后以上设置仍保留
+- [ ] 没有"管理服务器"权限的账号：指令在列表里不可见/被拒，提示"需要「管理服务器」权限"（不显示"应用未响应"），日志里不记 error
+
+状态：未在测试服务器验证。

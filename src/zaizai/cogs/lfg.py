@@ -13,6 +13,7 @@ from ..card import build_card
 from ..commands import LfgDecision, decide_lfg, parse_lfg_command
 from ..config import mode_in_scope
 from ..models import Mode
+from ..settings_view import KEY_AD, KEY_DELETE, KEY_FOOTER, effective_setting
 
 log = logging.getLogger(__name__)
 
@@ -53,9 +54,17 @@ class Lfg(commands.Cog):
         return self.store.get_room(channel.id)
 
     def _card_settings(self, channel_id: int) -> tuple[str | None, str | None]:
-        """(ad_text, footer_text); Task 14 switches this to effective_setting."""
-        ad = self.cfg.card_ad_text if self.cfg.card_ad_enabled else None
-        return (ad or None, self.cfg.card_footer_text or None)
+        """(ad_text, footer_text) in effect now; ad_enabled=false hides the ad."""
+        ad = None
+        if self.cfg.card_ad_enabled:
+            ad = effective_setting(self.store, self.cfg, KEY_AD)
+        footer = effective_setting(self.store, self.cfg, KEY_FOOTER)
+        return (ad or None, footer or None)
+
+    def _delete_original(self, channel_id: int) -> bool:
+        return bool(
+            effective_setting(self.store, self.cfg, KEY_DELETE, channel_id)
+        )
 
     # -- events ----------------------------------------------------------
     @commands.Cog.listener()
@@ -119,7 +128,7 @@ class Lfg(commands.Cog):
         )
         self.bot.dispatch("board_dirty", parsed.mode)
 
-        if self.cfg.card_delete_original:
+        if self._delete_original(message.channel.id):
             try:
                 await discord_call(message.delete)
             except discord.NotFound:
