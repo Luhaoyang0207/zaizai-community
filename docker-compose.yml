@@ -1,0 +1,27 @@
+# 线上: docker compose up -d --build
+# 本地测试: 见 README.md「本地测试」（用 --env-file .env.dev，由其中的变量切换令牌/配置/数据库）
+services:
+  bot-main:
+    build: .
+    env_file: ${ZAIZAI_ENV_FILE:-.env}
+    environment:
+      ZAIZAI_CONFIG: /app/config/${ZAIZAI_CONFIG_FILE:-settings.toml}
+      ZAIZAI_DB_PATH: /app/data/${ZAIZAI_DB_FILE:-zaizai.db}
+    volumes:
+      - ./config:/app/config
+      - ./data:/app/data
+    restart: unless-stopped
+
+  # 拆分示例：第二个机器人实例（不同令牌、不同数据文件、不同配置）。
+  # 配置里用 modules.enabled / modules.mode_scope 限定它负责的模块和模式；
+  # 主实例的配置也要相应去掉这些模式，避免两个机器人重复处理。
+  # bot-ranked:
+  #   build: .
+  #   env_file: .env.ranked          # 里面放另一个机器人的 DISCORD_TOKEN
+  #   environment:
+  #     ZAIZAI_CONFIG: /app/config/settings.ranked.toml
+  #     ZAIZAI_DB_PATH: /app/data/ranked.db
+  #   volumes:
+  #     - ./config:/app/config
+  #     - ./data:/app/data
+  #   restart: unless-stopped
