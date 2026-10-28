@@ -1,0 +1,74 @@
+# 值以 docs/PARAMETERS.md 为准；键名与该表一致。
+# 命令不带 "!"；空字符串 = 该模式命令关闭。
+
+[guild]
+id = 0                # 部署时填写
+board_channel_id = 0  # 部署时填写：信息组队总表所在频道
+
+[modes.ranked]
+entrance_channel_id = 0  # 部署时填写
+lfg_channel_id = 0       # 部署时填写
+category_id = 0          # 部署时填写
+
+[modes.match]
+entrance_channel_id = 0  # 部署时填写
+lfg_channel_id = 0       # 部署时填写
+category_id = 0          # 部署时填写
+
+[modes.other]
+entrance_channel_id = 0  # 部署时填写
+lfg_channel_id = 0       # 部署时填写
+category_id = 0          # 部署时填写
+
+[commands]
+ranked = "pw"
+match = "pp"
+other = ""
+accept_fullwidth = true
+need_voice = true
+need_voice_msg = "请先加入语音房间再发组队信息"
+allow_in_room_chat = true
+
+[card]
+delete_original = false
+after_entry_end = "keep"
+show_requirement = true
+show_board_link = true
+show_host = true
+ad_enabled = true
+ad_text = ""
+footer_text = ""
+
+[board]
+entry_timeout_min = 30
+remove_when_room_empty = true
+refresh_debounce_sec = 5
+max_entries_per_message = 10  # verified: layout fits at most 12 per message (D-010)
+empty_text = "当前没有活跃的信息。"
+show_member_count = true
+
+[voice]
+default_user_limit = 0
+empty_delete_delay_sec = 30
+reuse_empty_rooms = false
+category_max_channels = 45
+create_queue_interval_ms = 500
+
+[voice.name_template]
+ranked = "排位房 {n}"
+match = "匹配房 {n}"
+other = "其他房 {n}"
+
+[panel]
+enabled = true
+owner_permissions = "lock_only"
+button_lock = true
+button_full = true
+button_refresh = false
+button_crosshair = false
+recall_command = "/panel"
+help_text = "在此聊天发送组队命令即可发布组队信息；点「组队已满」可移除组队信息；/panel 可重新召唤本面板。"
+
+[modules]
+enabled = ["voice_rooms", "lfg", "board", "panel", "admin"]
+mode_scope = ["ranked", "match", "other"]
