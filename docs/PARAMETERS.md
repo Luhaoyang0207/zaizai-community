@@ -75,4 +75,22 @@ _最后更新：2026-10-28（已加入房间控制面板、房间空了直接删
 | `modules.mode_scope` | 本机器人负责哪些模式（排位/匹配/其他） | 全部 | 已确认 |
 
 
+## 7. 频道 ID（部署时填写，`config/settings.toml` 中默认为 0）
+
+| 键名 | 说明 | 当前值 | 状态 |
+|---|---|---|---|
+| `guild.id` | 服务器 ID | `0`（部署时填写） | 待填 |
+| `guild.board_channel_id` | 信息组队总表所在频道 | `0`（部署时填写） | 待填 |
+| `modes.ranked.entrance_channel_id` | 排位：点击加入即建房的入口语音频道 | `0`（部署时填写） | 待填 |
+| `modes.ranked.lfg_channel_id` | 排位：组队文字频道 | `0`（部署时填写） | 待填 |
+| `modes.ranked.category_id` | 排位：临时房间所在的首个分类 | `0`（部署时填写） | 待填 |
+| `modes.match.entrance_channel_id` | 匹配：入口语音频道 | `0`（部署时填写） | 待填 |
+| `modes.match.lfg_channel_id` | 匹配：组队文字频道 | `0`（部署时填写） | 待填 |
+| `modes.match.category_id` | 匹配：临时房间所在的首个分类 | `0`（部署时填写） | 待填 |
+| `modes.other.entrance_channel_id` | 其他游戏：入口语音频道 | `0`（部署时填写） | 待填 |
+| `modes.other.lfg_channel_id` | 其他游戏：组队文字频道 | `0`（部署时填写） | 待填 |
+| `modes.other.category_id` | 其他游戏：临时房间所在的首个分类 | `0`（部署时填写） | 待填 |
+
+> 配置文件里命令不带 `!`（如 `commands.ranked = "pw"`），空字符串表示该模式命令关闭；`voice.name_template` 在配置文件里是一张表（`ranked` / `match` / `other` 各一个模板）。
+
 > 说明：同一玩家的发命令间隔，由 Discord 频道自带的慢速模式（slowmode）控制，机器人不再单独限制。需求文字只按 Discord 的字数上限自动截断。

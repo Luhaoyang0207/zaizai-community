@@ -22,3 +22,7 @@ __pycache__/
 venv/
 dist/
 build/
+
+# Runtime data / local env
+data/
+.env.dev
