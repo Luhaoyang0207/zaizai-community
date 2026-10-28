@@ -1,4 +1,4 @@
-from zaizai.reconcile import ReconcileResult, reconcile
+from zaizai.reconcile import ReconcileResult, partition_stale, reconcile
 
 
 def test_stale_room_detected():
@@ -23,3 +23,16 @@ def test_tracked_and_live_untouched():
 
 def test_all_empty_inputs():
     assert reconcile([], {}) == ReconcileResult(frozenset(), frozenset(), frozenset())
+
+
+def test_partition_stale_keeps_rooms_that_still_exist_elsewhere():
+    gone, moved = partition_stale({1, 2, 3}, still_exists=lambda rid: rid == 2)
+    assert gone == frozenset({1, 3})
+    assert moved == frozenset({2})
+
+
+def test_partition_stale_empty():
+    assert partition_stale(set(), still_exists=lambda rid: True) == (
+        frozenset(),
+        frozenset(),
+    )

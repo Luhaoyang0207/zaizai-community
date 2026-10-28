@@ -2,7 +2,8 @@
 
 Layout per message (see D-010):
     Container
-      TextDisplay   header: mode name, "更新于 <t:now:R>", page i/n
+      TextDisplay   header: mode name, "更新于 <t:changed:R>", page i/n
+                    (changed = when this page's content last changed, R19)
       Separator
       per entry: Section(TextDisplay(entry text), accessory=link Button)
     -> 3 + 3 * entries components; Discord allows 40 -> at most 12 entries.
@@ -98,6 +99,32 @@ def header_text(mode: Mode, now: float, page_index: int, total_pages: int) -> st
     if total_pages > 1:
         text += f" · {page_index + 1}/{total_pages}"
     return text
+
+
+def page_fingerprint(
+    mode: Mode,
+    page: Sequence[Entry],
+    page_index: int,
+    total_pages: int,
+    *,
+    guild_id: int,
+    rooms: Mapping[int, RoomInfo],
+    empty_text: str,
+    show_count: bool,
+) -> str:
+    """Everything a board page shows except the header timestamp."""
+    parts: list[str] = [header_text(mode, 0, page_index, total_pages)]
+    if not page:
+        parts.append(empty_text)
+    for entry in page:
+        parts.append(entry_text(entry, guild_id))
+        room = rooms.get(entry.room_id)
+        if room is not None:
+            parts.append(room_button_label(room, show_count))
+            parts.append(room_url(guild_id, entry.room_id))
+        else:
+            parts.append("")
+    return repr(parts)
 
 
 def build_board_view(

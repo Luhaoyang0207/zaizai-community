@@ -113,6 +113,9 @@ class Lfg(commands.Cog):
             now,
             ad_text,
             footer_text,
+            show_requirement=self.cfg.card_show_requirement,
+            show_board_link=self.cfg.card_show_board_link,
+            show_host=self.cfg.card_show_host,
         )
         reply = await discord_call(
             lambda: message.reply(embed=embed, mention_author=False)

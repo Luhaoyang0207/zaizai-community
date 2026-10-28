@@ -11,11 +11,12 @@ import discord
 from discord.ext import commands, tasks
 
 from ..asyncutil import Debouncer
-from ..board_sync import sync_board
+from ..board_sync import PageState, plan_page_edit, sync_board
 from ..board_view import (
     RoomInfo,
     build_board_view,
     effective_per_page,
+    page_fingerprint,
     split_live_entries,
 )
 from ..bot import discord_call
@@ -29,7 +30,11 @@ CLEANUP_INTERVAL_SEC = 60
 
 
 class DiscordBoardGateway:
-    """BoardGateway backed by the board channel; built fresh for each refresh."""
+    """BoardGateway backed by the board channel; built fresh for each refresh.
+
+    `cache` (message id -> PageState) outlives the gateway so unchanged pages
+    are not re-edited (R19).
+    """
 
     def __init__(
         self,
@@ -40,55 +45,86 @@ class DiscordBoardGateway:
         total_pages: int,
         empty_text: str,
         show_count: bool,
+        cache: dict[int, PageState],
     ) -> None:
         self._channel = channel
+        self._cache = cache
         self._guild_id = guild_id
         self._rooms = rooms
         self._total_pages = total_pages
         self._empty_text = empty_text
         self._show_count = show_count
 
-    def _view(self, mode: Mode, page: Sequence[Entry], page_index: int):
-        return build_board_view(
+    def _fingerprint(self, mode: Mode, page: Sequence[Entry], page_index: int) -> str:
+        return page_fingerprint(
             mode,
             page,
             page_index,
             self._total_pages,
-            now=time.time(),
             guild_id=self._guild_id,
             rooms=self._rooms,
             empty_text=self._empty_text,
             show_count=self._show_count,
         )
 
-    async def exists(self, message_id: int) -> bool:
-        try:
-            await discord_call(lambda: self._channel.fetch_message(message_id))
-        except discord.NotFound:
-            return False
-        return True
+    def _view(
+        self, mode: Mode, page: Sequence[Entry], page_index: int, changed_at: float
+    ):
+        return build_board_view(
+            mode,
+            page,
+            page_index,
+            self._total_pages,
+            now=changed_at,
+            guild_id=self._guild_id,
+            rooms=self._rooms,
+            empty_text=self._empty_text,
+            show_count=self._show_count,
+        )
 
     async def send(self, mode: Mode, page: list[Entry], page_index: int) -> int:
-        view = self._view(mode, page, page_index)
+        state = PageState(self._fingerprint(mode, page, page_index), time.time())
+        view = self._view(mode, page, page_index, state.changed_at)
         message = await discord_call(
             lambda: self._channel.send(
                 view=view, allowed_mentions=discord.AllowedMentions.none()
             )
         )
+        self._cache[message.id] = state
         return message.id
 
     async def edit(
         self, message_id: int, mode: Mode, page: list[Entry], page_index: int
-    ) -> None:
-        view = self._view(mode, page, page_index)
-        partial = self._channel.get_partial_message(message_id)
-        await discord_call(
-            lambda: partial.edit(
-                view=view, allowed_mentions=discord.AllowedMentions.none()
-            )
+    ) -> bool:
+        """Edit only when the content changed; False if the message is gone.
+
+        A skipped edit does not check that the message still exists, so a
+        manually deleted board page is re-sent on the next content change
+        (or after a restart, when the cache is empty).
+        """
+        state = plan_page_edit(
+            self._cache.get(message_id),
+            self._fingerprint(mode, page, page_index),
+            time.time(),
         )
+        if state is None:
+            return True
+        view = self._view(mode, page, page_index, state.changed_at)
+        partial = self._channel.get_partial_message(message_id)
+        try:
+            await discord_call(
+                lambda: partial.edit(
+                    view=view, allowed_mentions=discord.AllowedMentions.none()
+                )
+            )
+        except discord.NotFound:
+            self._cache.pop(message_id, None)
+            return False
+        self._cache[message_id] = state
+        return True
 
     async def delete(self, message_id: int) -> None:
+        self._cache.pop(message_id, None)
         try:
             await discord_call(self._channel.get_partial_message(message_id).delete)
         except discord.NotFound:
@@ -103,6 +139,8 @@ class Board(commands.Cog):
         self._locks: dict[Mode, asyncio.Lock] = {}
         self._debouncer = Debouncer(self.cfg.board_refresh_debounce_sec, self._refresh)
         self._ready_done = False
+        # What each board message shows now (in memory; empty after restart).
+        self._page_cache: dict[int, PageState] = {}
 
     def _modes(self) -> list[Mode]:
         """In-scope modes with a command; a disabled mode can never have entries."""
@@ -192,6 +230,7 @@ class Board(commands.Cog):
             total_pages=len(pages),
             empty_text=self.cfg.board_empty_text,
             show_count=self.cfg.board_show_member_count,
+            cache=self._page_cache,
         )
         await sync_board(self.store, gateway, mode, pages)
 

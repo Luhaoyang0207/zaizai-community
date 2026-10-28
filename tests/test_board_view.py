@@ -12,6 +12,7 @@ from zaizai.board_view import (
     entry_requirement,
     entry_text,
     header_text,
+    page_fingerprint,
     room_button_label,
     room_url,
     split_live_entries,
@@ -152,3 +153,30 @@ def test_split_live_entries():
     live, gone = split_live_entries(entries, lambda room_id: room_id != 102)
     assert [e.id for e in live] == [1, 3]
     assert [e.id for e in gone] == [2]
+
+
+def _fp(entries, rooms, *, total=1, show_count=True, empty="-"):
+    return page_fingerprint(
+        Mode.RANKED, entries, 0, total, guild_id=7, rooms=rooms,
+        empty_text=empty, show_count=show_count,
+    )
+
+
+def test_page_fingerprint_stable_and_ignores_time():
+    rooms = {101: RoomInfo("排位 1", 3)}
+    assert _fp([make_entry(1)], rooms) == _fp([make_entry(1)], dict(rooms))
+
+
+def test_page_fingerprint_changes_with_visible_content():
+    base = _fp([make_entry(1)], {101: RoomInfo("排位 1", 3)})
+    assert _fp([make_entry(1)], {101: RoomInfo("排位 1", 4)}) != base
+    assert _fp([make_entry(1)], {101: RoomInfo("排位 9", 3)}) != base
+    assert _fp([make_entry(1, text="新需求")], {101: RoomInfo("排位 1", 3)}) != base
+    assert _fp([make_entry(1)], {101: RoomInfo("排位 1", 3)}, total=2) != base
+    assert _fp([], {}) != _fp([], {}, empty="空")
+
+
+def test_page_fingerprint_ignores_member_count_when_hidden():
+    a = _fp([make_entry(1)], {101: RoomInfo("排位 1", 3)}, show_count=False)
+    b = _fp([make_entry(1)], {101: RoomInfo("排位 1", 4)}, show_count=False)
+    assert a == b

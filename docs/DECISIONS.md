@@ -46,3 +46,7 @@ Rejected: 旧版 Embed + ActionRow（最多 25 个按钮，按钮不能和条目
 - 没有命令的模式不发总表。
 - 总表里的需求文字做 markdown 转义，按原文单行显示。
 - `/panel` 召回命令名固定，不随配置改。
+- 总表"更新于"= 该页内容最后一次变化的时间；内容没变的页不再编辑（降低 API 请求，保证 99+ 房间不触发限速）。被手动删掉的总表页在下次内容变化或重启后重建。
+- 锁房同时把房间里"允许连接"的身份组覆盖改为拒绝；解锁时按所在分类恢复这些身份组的 connect。
+- 第一版只实现 `card.after_entry_end=keep`、`voice.reuse_empty_rooms=false`、`panel.owner_permissions=lock_only`、`panel.button_refresh/crosshair=false`；填其他值启动时报错，而不是悄悄不生效。
+- 对账时，已记录但被移出受管分类的房间（频道仍在）继续记录，空了照样删除，不变成孤儿。

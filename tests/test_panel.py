@@ -8,6 +8,7 @@ from zaizai.cogs.panel import (
     owner_denial,
     panel_custom_id,
     parse_panel_custom_id,
+    role_connect_changes,
 )
 from zaizai.models import Mode, Room
 
@@ -65,3 +66,46 @@ def test_owner_denial_not_owner():
 
 def test_owner_denial_owner_allowed():
     assert owner_denial(_room(owner_id=7), 7) is None
+
+
+EVERYONE, VERIFIED, MOD = "everyone", "verified", "mod"
+
+
+def test_lock_denies_everyone_and_every_role_that_allows_connect():
+    changes = role_connect_changes(
+        True,
+        EVERYONE,
+        room_connect={EVERYONE: None, VERIFIED: True, MOD: None},
+        category_connect={VERIFIED: True},
+    )
+    assert changes == {EVERYONE: False, VERIFIED: False}
+
+
+def test_lock_without_everyone_overwrite_still_denies_everyone():
+    assert role_connect_changes(True, EVERYONE, {}, {}) == {EVERYONE: False}
+
+
+def test_lock_already_locked_changes_nothing():
+    changes = role_connect_changes(
+        True, EVERYONE, {EVERYONE: False, VERIFIED: False}, {VERIFIED: True}
+    )
+    assert changes == {}
+
+
+def test_unlock_restores_from_category():
+    changes = role_connect_changes(
+        False,
+        EVERYONE,
+        room_connect={EVERYONE: False, VERIFIED: False, MOD: False},
+        category_connect={EVERYONE: False, VERIFIED: True},
+    )
+    # everyone stays denied like its category; verified back to allow;
+    # mod has no category overwrite -> neutral
+    assert changes == {VERIFIED: True, MOD: None}
+
+
+def test_unlock_without_category_clears_denies():
+    changes = role_connect_changes(
+        False, EVERYONE, {EVERYONE: False, VERIFIED: False, MOD: True}, {}
+    )
+    assert changes == {EVERYONE: None, VERIFIED: None}

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from typing import Protocol
 
 from zaizai.models import Entry, Mode
@@ -12,15 +13,33 @@ log = logging.getLogger(__name__)
 
 
 class BoardGateway(Protocol):
-    async def exists(self, message_id: int) -> bool: ...
-
     async def send(self, mode: Mode, page: list[Entry], page_index: int) -> int: ...
 
     async def edit(
         self, message_id: int, mode: Mode, page: list[Entry], page_index: int
-    ) -> None: ...
+    ) -> bool:
+        """Bring the message up to date; False if the message no longer exists."""
+        ...
 
     async def delete(self, message_id: int) -> None: ...
+
+
+@dataclass(frozen=True)
+class PageState:
+    """What a board message currently shows: content fingerprint and its time."""
+
+    fingerprint: str
+    changed_at: float
+
+
+def plan_page_edit(
+    cached: PageState | None, fingerprint: str, now: float
+) -> PageState | None:
+    """None when the message already shows this content (skip the edit);
+    otherwise the new state to render, stamped with `now` (R19)."""
+    if cached is not None and cached.fingerprint == fingerprint:
+        return None
+    return PageState(fingerprint, now)
 
 
 async def sync_board(
@@ -32,8 +51,9 @@ async def sync_board(
     try:
         for index, page in enumerate(pages):
             message_id = old_ids[index] if index < len(old_ids) else None
-            if message_id is not None and await gateway.exists(message_id):
-                await gateway.edit(message_id, mode, page, index)
+            if message_id is not None and await gateway.edit(
+                message_id, mode, page, index
+            ):
                 new_ids.append(message_id)
             else:
                 new_ids.append(await gateway.send(mode, page, index))

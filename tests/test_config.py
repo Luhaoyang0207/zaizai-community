@@ -1,4 +1,6 @@
 import re
+
+import pytest
 import tomllib
 from pathlib import Path
 
@@ -51,3 +53,26 @@ def test_mode_in_scope():
     narrow = replace(cfg, modules_mode_scope=(Mode.MATCH,))
     assert mode_in_scope(narrow, Mode.MATCH)
     assert not mode_in_scope(narrow, Mode.RANKED)
+
+
+def _write_variant(tmp_path, old: str, new: str) -> Path:
+    text = SETTINGS.read_text(encoding="utf-8")
+    assert old in text
+    path = tmp_path / "settings.toml"
+    path.write_text(text.replace(old, new, 1), encoding="utf-8")
+    return path
+
+
+@pytest.mark.parametrize(
+    "old, new, key",
+    [
+        ('after_entry_end = "keep"', 'after_entry_end = "delete"', "card.after_entry_end"),
+        ("reuse_empty_rooms = false", "reuse_empty_rooms = true", "voice.reuse_empty_rooms"),
+        ('owner_permissions = "lock_only"', 'owner_permissions = "all"', "panel.owner_permissions"),
+        ("button_refresh = false", "button_refresh = true", "panel.button_refresh"),
+        ("button_crosshair = false", "button_crosshair = true", "panel.button_crosshair"),
+    ],
+)
+def test_load_config_rejects_unimplemented_values(tmp_path, old, new, key):
+    with pytest.raises(ValueError, match=re.escape(key)):
+        load_config(_write_variant(tmp_path, old, new))

@@ -4,7 +4,7 @@ from types import SimpleNamespace
 import discord
 import pytest
 
-from zaizai.bot import ErrorNotifier, discord_call, enabled_cogs
+from zaizai.bot import ErrorNotifier, cog_handles_app_errors, discord_call, enabled_cogs
 from zaizai.config import load_config, mode_in_scope
 from zaizai.models import Mode
 
@@ -93,3 +93,19 @@ async def test_discord_call_returns_after_transient_failure():
         return "ok"
 
     assert await discord_call(f, delay_sec=0) == "ok"
+
+
+def test_cog_handles_app_errors():
+    async def handler(interaction, error):
+        pass
+
+    with_handler = SimpleNamespace(
+        binding=SimpleNamespace(__discord_app_commands_error_handler__=handler)
+    )
+    without = SimpleNamespace(
+        binding=SimpleNamespace(__discord_app_commands_error_handler__=None)
+    )
+    assert cog_handles_app_errors(with_handler) is True
+    assert cog_handles_app_errors(without) is False
+    assert cog_handles_app_errors(SimpleNamespace(binding=None)) is False
+    assert cog_handles_app_errors(None) is False

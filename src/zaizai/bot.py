@@ -31,6 +31,16 @@ def enabled_cogs(cfg: Config) -> list[str]:
     return names
 
 
+def cog_handles_app_errors(command) -> bool:
+    """True if the command's cog has its own cog_app_command_error.
+
+    discord.py calls that handler *and* tree.on_error, so the tree-level
+    handler must skip such errors to avoid double reports.
+    """
+    binding = getattr(command, "binding", None)
+    return getattr(binding, "__discord_app_commands_error_handler__", None) is not None
+
+
 class ErrorNotifier:
     """Remembers which error kinds were already reported to the board channel."""
 
@@ -131,5 +141,10 @@ class ZaizaiBot(commands.Bot):
         self, interaction: discord.Interaction, error: app_commands.AppCommandError
     ) -> None:
         cmd = interaction.command.qualified_name if interaction.command else "?"
+        if isinstance(error, app_commands.CheckFailure):
+            log.warning("check failed for command %s: %s", cmd, error)
+            return
+        if cog_handles_app_errors(interaction.command):
+            return  # already reported by the cog's cog_app_command_error
         cause = getattr(error, "original", error)
         await self.report_error(cause, f"command {cmd}")

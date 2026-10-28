@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import logging
 import re
+from collections.abc import Mapping
+from typing import TypeVar
 
 import discord
 from discord import app_commands
@@ -13,6 +15,8 @@ from ..bot import discord_call
 from ..models import Room
 
 log = logging.getLogger(__name__)
+
+K = TypeVar("K")
 
 ACTIONS = ("lock", "full")
 PANEL_TEMPLATE = r"zaizai:panel:(?P<action>lock|full):(?P<room>\d+)"
@@ -60,6 +64,35 @@ def owner_denial(room: Room | None, user_id: int) -> str | None:
     return None
 
 
+def role_connect_changes(
+    locking: bool,
+    default_role: K,
+    room_connect: Mapping[K, bool | None],
+    category_connect: Mapping[K, bool | None],
+) -> dict[K, bool | None]:
+    """Role overwrites whose `connect` must change, and the new value.
+
+    room_connect / category_connect: role -> connect value of that role's
+    overwrite on the room / its category (missing = no overwrite = None).
+    Lock: deny @everyone and every role that explicitly allows connect (an
+    allow on a role beats the @everyone deny). Unlock: every denied role goes
+    back to what its category says (None without a category overwrite).
+    """
+    changes: dict[K, bool | None] = {}
+    if locking:
+        if room_connect.get(default_role) is not False:
+            changes[default_role] = False
+        for role, connect in room_connect.items():
+            if role != default_role and connect is True:
+                changes[role] = False
+    else:
+        for role, connect in room_connect.items():
+            target = category_connect.get(role)
+            if connect is False and target is not False:
+                changes[role] = target
+    return changes
+
+
 # -- persistent buttons ----------------------------------------------------
 class PanelButton(discord.ui.DynamicItem[discord.ui.Button], template=PANEL_TEMPLATE):
     """Panel button whose custom_id carries action and room id (survives restarts)."""
@@ -87,6 +120,15 @@ class PanelButton(discord.ui.DynamicItem[discord.ui.Button], template=PANEL_TEMP
             await _reply(interaction, MSG_ERROR)
             return
         await cog.handle_button(interaction, self.action, self.room_id)
+
+
+def _role_connect(channel) -> dict[discord.Role, bool | None]:
+    """connect value of every role overwrite on a channel or category."""
+    return {
+        target: overwrite.connect
+        for target, overwrite in channel.overwrites.items()
+        if isinstance(target, discord.Role)
+    }
 
 
 async def _reply(interaction: discord.Interaction, text: str) -> None:
@@ -182,11 +224,17 @@ class Panel(commands.Cog):
         await interaction.response.defer()
         locked = not room.locked
         if locked:
-            # Owner keeps connect so they can rejoin; then deny @everyone.
+            # Owner keeps connect so they can rejoin, even through the denies.
             await self._set_connect(channel, interaction.user, True)
-            await self._set_connect(channel, guild.default_role, False)
-        else:
-            await self._set_connect(channel, guild.default_role, None)
+        category = channel.category
+        changes = role_connect_changes(
+            locked,
+            guild.default_role,
+            _role_connect(channel),
+            _role_connect(category) if category is not None else {},
+        )
+        for role, value in changes.items():
+            await self._set_connect(channel, role, value)
         self.store.set_locked(room.id, locked)
         room = self.store.get_room(room.id) or room
         view = self.build_view(room)

@@ -16,7 +16,7 @@ from ..bot import discord_call
 from ..config import mode_in_scope
 from ..models import Mode, Room
 from ..placement import next_room_name, pick_category
-from ..reconcile import reconcile
+from ..reconcile import partition_stale, reconcile
 
 log = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ class VoiceRooms(commands.Cog):
         self.store = bot.store
         self.queue = SerialQueue(self.cfg.voice_create_queue_interval_ms)
         self._timers: dict[int, asyncio.Task[None]] = {}
-        self._reconciled = False
+        self._reconcile_lock = asyncio.Lock()
 
     # -- helpers ---------------------------------------------------------
     def _modes(self) -> list[Mode]:
@@ -115,14 +115,17 @@ class VoiceRooms(commands.Cog):
         rooms = {r.id: r for r in self.store.list_rooms()}
         t = classify_transition(b, a, entrances.keys(), rooms.keys())
 
+        # Member counts only show on the board for rooms with an entry.
         if t.left_room is not None:
             room = rooms[t.left_room]
-            self.bot.dispatch("board_dirty", room.mode)
+            if self.store.get_entry_by_room(room.id) is not None:
+                self.bot.dispatch("board_dirty", room.mode)
             if before.channel is not None and not before.channel.members:
                 self._on_room_empty(room)
         if t.joined_room is not None:
             self._cancel_timer(t.joined_room)
-            self.bot.dispatch("board_dirty", rooms[t.joined_room].mode)
+            if self.store.get_entry_by_room(t.joined_room) is not None:
+                self.bot.dispatch("board_dirty", rooms[t.joined_room].mode)
         if t.entrance_joined is not None:
             await self._create_room(member, entrances[t.entrance_joined])
 
@@ -248,16 +251,18 @@ class VoiceRooms(commands.Cog):
             )
         )
 
-    # -- startup reconcile -----------------------------------------------
+    # -- reconcile (startup and every reconnect) ---------------------------
     @commands.Cog.listener()
     async def on_ready(self) -> None:
-        if self._reconciled:
-            return
-        self._reconciled = True
-        try:
-            await self._reconcile_all()
-        except Exception as e:
-            await self.bot.report_error(e, "voice_rooms.reconcile")
+        # on_ready fires again after a gateway re-identify; voice events missed
+        # meanwhile can leave empty rooms without a delete timer, so reconcile
+        # every time. Runs are serialized; each run is idempotent (adopted rooms
+        # are tracked afterwards, timers are cancel-then-start).
+        async with self._reconcile_lock:
+            try:
+                await self._reconcile_all()
+            except Exception as e:
+                await self.bot.report_error(e, "voice_rooms.reconcile")
 
     async def _reconcile_all(self) -> None:
         guild = self.bot.get_guild(self.cfg.guild_id)
@@ -289,9 +294,20 @@ class VoiceRooms(commands.Cog):
             result = reconcile(
                 tracked.keys(), {i: len(v.members) for i, v in live.items()}
             )
-            for rid in result.stale:
+            # A tracked room moved out of the managed categories (e.g. by an
+            # admin) is still a live temporary room: keep tracking it so it is
+            # deleted when empty instead of being orphaned.
+            gone, moved = partition_stale(
+                result.stale,
+                lambda rid: isinstance(guild.get_channel(rid), discord.VoiceChannel),
+            )
+            for rid in gone:
                 self.store.delete_room(rid)
                 self.store.delete_entry_by_room(rid)
+            for rid in moved:
+                vc = guild.get_channel(rid)
+                if not vc.members:
+                    self._on_room_empty(tracked[rid])
             for rid in result.adopt:
                 vc = live[rid]
                 self.store.add_room(

@@ -33,3 +33,33 @@ def test_card_empty_text_uses_default_title():
 def test_card_long_text_truncated_to_title_limit():
     e = _card(text="x" * 500)
     assert len(e.title) == 256
+
+
+def test_card_show_flags_default_on():
+    e = build_card("铂钻", 42, 99, 1_700_000_000.0, None, None)
+    assert e.title == "铂钻"
+    assert "<#99>" in e.description and "<@42>" in e.description
+
+
+def test_card_hide_requirement_uses_default_title():
+    e = build_card("铂钻", 42, 99, 1.0, None, None, show_requirement=False)
+    assert e.title == "组队中"
+
+
+def test_card_hide_board_link():
+    e = build_card("铂钻", 42, 99, 1.0, None, None, show_board_link=False)
+    assert "<#99>" not in e.description and "找人组队看这里" not in e.description
+    assert "<@42>" in e.description
+
+
+def test_card_hide_host():
+    e = build_card("铂钻", 42, 99, 1.0, None, None, show_host=False)
+    assert "<@42>" not in e.description and "<t:1:R>" not in e.description
+    assert "<#99>" in e.description
+
+
+def test_card_all_lines_hidden_keeps_ad():
+    e = build_card(
+        "铂钻", 42, 99, 1.0, "AD", None, show_board_link=False, show_host=False
+    )
+    assert e.description == "AD"

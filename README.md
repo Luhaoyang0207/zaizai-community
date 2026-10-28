@@ -73,6 +73,10 @@ docker compose -p zaizai-dev --env-file .env.dev up --build
 
 见 `docker-compose.yml` 末尾被注释的第二个服务示例：不同令牌（另一个 env 文件）、不同数据文件、不同 `ZAIZAI_CONFIG`（用 `modules.enabled` / `modules.mode_scope` 限定职责）。
 
+注意：
+- 每个实例都会注册自己的 `/panel`、`/ad`、`/motto`（以及 `/setting`），斜杠菜单里会出现重复项。额外的实例请在 `modules.enabled` 里去掉 `admin` 和 `panel`，只留一个实例负责它们。
+- `/ad`、`/motto`、`/setting` 的设置存在各实例自己的 SQLite 文件里，不会共享：哪个实例发卡片，就要在哪个实例上设置。
+
 ## 4. 测试
 
 ```

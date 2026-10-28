@@ -1,6 +1,6 @@
 import pytest
 
-from zaizai.board_sync import sync_board
+from zaizai.board_sync import PageState, plan_page_edit, sync_board
 from zaizai.models import Entry, Mode
 from zaizai.store import Store
 
@@ -16,9 +16,6 @@ class FakeGateway:
         self.next_id = 1000
         self.calls: list[tuple] = []
 
-    async def exists(self, message_id):
-        return message_id in self.alive
-
     async def send(self, mode, page, page_index):
         self.next_id += 1
         self.alive.add(self.next_id)
@@ -26,7 +23,11 @@ class FakeGateway:
         return self.next_id
 
     async def edit(self, message_id, mode, page, page_index):
+        if message_id not in self.alive:
+            self.calls.append(("edit-missing", message_id, page_index))
+            return False
         self.calls.append(("edit", message_id, page_index))
+        return True
 
     async def delete(self, message_id):
         self.calls.append(("delete", message_id))
@@ -66,7 +67,7 @@ async def test_manually_deleted_message_is_recreated_and_id_stored(store):
     store.set_board_message_ids(Mode.RANKED, [50])
     gw = FakeGateway(existing=set())
     await sync_board(store, gw, Mode.RANKED, [[entry(1)]])
-    assert gw.calls == [("send", 0, 1001)]
+    assert gw.calls == [("edit-missing", 50, 0), ("send", 0, 1001)]
     assert store.get_board_message_ids(Mode.RANKED) == [1001]
 
 
@@ -105,3 +106,33 @@ async def test_partial_failure_persists_ids_sent_so_far(store):
     with pytest.raises(GatewayError):
         await sync_board(store, gw, Mode.RANKED, [[entry(1)], [entry(2)]])
     assert store.get_board_message_ids(Mode.RANKED) == [1001]
+
+
+async def test_partial_failure_on_edit_keeps_untouched_old_ids(store):
+    store.set_board_message_ids(Mode.RANKED, [50, 51])
+
+    class Failing(FakeGateway):
+        async def edit(self, message_id, mode, page, page_index):
+            if message_id == 51:
+                raise GatewayError("boom")
+            return await super().edit(message_id, mode, page, page_index)
+
+    gw = Failing(existing={51})
+    with pytest.raises(GatewayError):
+        await sync_board(store, gw, Mode.RANKED, [[entry(1)], [entry(2)]])
+    # page 0 was re-sent (50 was gone), page 1's id is kept for the next try
+    assert store.get_board_message_ids(Mode.RANKED) == [1001, 51]
+
+
+def test_plan_page_edit_first_time_edits_with_now():
+    assert plan_page_edit(None, "fp", 100.0) == PageState("fp", 100.0)
+
+
+def test_plan_page_edit_unchanged_content_is_skipped():
+    assert plan_page_edit(PageState("fp", 50.0), "fp", 100.0) is None
+
+
+def test_plan_page_edit_changed_content_restamps():
+    assert plan_page_edit(PageState("old", 50.0), "new", 100.0) == PageState(
+        "new", 100.0
+    )

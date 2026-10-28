@@ -69,9 +69,31 @@ class Config:
     modules_mode_scope: tuple[Mode, ...]
 
 
+# Keys whose other values the first version does not implement (fixed in v1).
+FIXED_VALUES: dict[str, object] = {
+    "card.after_entry_end": "keep",
+    "voice.reuse_empty_rooms": False,
+    "panel.owner_permissions": "lock_only",
+    "panel.button_refresh": False,
+    "panel.button_crosshair": False,
+}
+
+
+def _check_fixed(d: dict) -> None:
+    for key, expected in FIXED_VALUES.items():
+        section, name = key.split(".")
+        value = d[section][name]
+        if value != expected:
+            raise ValueError(
+                f"{key} = {value!r} is not supported in this version; "
+                f"only {expected!r} is implemented (see docs/PARAMETERS.md)"
+            )
+
+
 def load_config(path: str | Path) -> Config:
     with open(path, "rb") as f:
         d = tomllib.load(f)
+    _check_fixed(d)
 
     guild, commands, card = d["guild"], d["commands"], d["card"]
     board, voice, panel, modules = d["board"], d["voice"], d["panel"], d["modules"]
