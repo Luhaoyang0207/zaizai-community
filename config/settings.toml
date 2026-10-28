@@ -43,7 +43,7 @@ footer_text = ""
 entry_timeout_min = 30
 remove_when_room_empty = true
 refresh_debounce_sec = 5
-max_entries_per_message = 10
+max_entries_per_message = 10  # verified: layout fits at most 12 per message (D-010)
 empty_text = "当前没有活跃的信息。"
 show_member_count = true
 

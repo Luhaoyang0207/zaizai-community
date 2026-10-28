@@ -39,7 +39,7 @@ _最后更新：2026-10-28（已加入房间控制面板、房间空了直接删
 | `board.entry_timeout_min` | 条目超过多少分钟没有更新就清掉（"x 分钟"） | `30` | 建议值 |
 | `board.remove_when_room_empty` | 房间空了立即清掉条目 | `true` | 已确认 |
 | `board.refresh_debounce_sec` | 合并短时间内多次变化，最多每隔几秒编辑一次 | `5` | 建议值 |
-| `board.max_entries_per_message` | 一条消息最多放多少个条目，超出就分页/拆条 | `10` | 待查证 |
+| `board.max_entries_per_message` | 一条消息最多放多少个条目，超出就分页/拆条 | `10` | 已查证（Components V2 每条消息最多 40 个组件、4000 字；本布局每页最多 12 条，取 10，见 D-010） |
 | `board.empty_text` | 没有条目时显示的文字 | 当前没有活跃的信息。 | 已确认 |
 | `board.show_member_count` | 条目右侧显示"人数 @ 房间名"按钮 | `true` | 已确认 |
 

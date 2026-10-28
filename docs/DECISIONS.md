@@ -30,3 +30,10 @@ Why: 用户决定。
 
 ## D-009 — 2026-10-28 — 管理指令的权限范围延后设计
 Why: 用户决定先留着，第一版不阻塞。
+
+## D-010 — 2026-10-28 — 总表用 Components V2 布局，每条消息最多 10 个条目
+布局：一个 Container = 标题 TextDisplay（模式名 · 更新于 · 页码）+ Separator + 每个条目一个 Section（TextDisplay：需求 / 发起人 · 时间 · "查看卡片"跳转链接；右侧链接按钮"{人数}人 @ {房间名}"）。
+限制：Discord 官方文档（components/reference）写明 "Messages allow up to 40 total components"；discord.py 2.7.1 的 `LayoutView` 按含嵌套组件的总数校验 40，并规定文本总长上限 4000。本布局 3 + 3×条目数 ≤ 40 → 每页最多 12 条。取 10 留余量；代码把配置值夹到 12 以内，需求文字截到 150 字，保证满页 < 4000 字。
+`board.show_member_count=false` 时仍保留 Section 和链接按钮，按钮只写房间名（保留进房入口，组件数不变）。
+Why: 对照用户截图 2：一行一条目 + 右侧进房按钮；链接按钮不产生交互，不需要持久视图。
+Rejected: 旧版 Embed + ActionRow（最多 25 个按钮，按钮不能和条目同行）；每页 12 条（贴着上限，没有余量再加组件）。
