@@ -20,4 +20,6 @@ Read, if present: `AGENTS.md`, `CLAUDE.md`, `README.md`, and everything in `docs
 - After every meaningful task, update `docs/HANDOFF.md` (goal, changes, files, decisions, blockers, next task).
 - Record important technical/product/workflow decisions in `docs/DECISIONS.md`.
 - Keep `docs/TODO.md` current.
+- Every change: add a line at the top of `README.md` → 「改动记录」 (date, what changed in plain Chinese, commit hash or `待提交`).
+  If the change alters behaviour, also update `README.md` → 「功能规则」 so it describes the bot as it is now. These two sections are what the owner reviews.
 - Always leave the repo so the next agent can continue from `AGENTS.md` + `docs/HANDOFF.md` + `docs/DECISIONS.md`.
