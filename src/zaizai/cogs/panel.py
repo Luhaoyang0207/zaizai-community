@@ -55,6 +55,20 @@ def lock_label(locked: bool) -> str:
     return "🔒锁" if locked else "🔓开"
 
 
+PANEL_TITLE = "房间控制面板"
+PANEL_COLOR = discord.Color.blurple()
+
+
+def build_panel_embed(help_text: str) -> discord.Embed:
+    """The panel's help text shown as an embed (the owner is @-ed outside it,
+    because mentions inside an embed don't notify)."""
+    return discord.Embed(
+        title=PANEL_TITLE,
+        description=help_text.strip() or None,
+        color=PANEL_COLOR,
+    )
+
+
 def owner_denial(room: Room | None, user_id: int) -> str | None:
     """Reason a user may not press a panel button, or None if allowed."""
     if room is None:
@@ -167,7 +181,8 @@ class Panel(commands.Cog):
             kwargs["view"] = view
         message = await discord_call(
             lambda: channel.send(
-                f"<@{room.owner_id}>\n{self.cfg.panel_help_text}",
+                f"<@{room.owner_id}>",
+                embed=build_panel_embed(self.cfg.panel_help_text),
                 allowed_mentions=discord.AllowedMentions(
                     everyone=False,
                     roles=False,

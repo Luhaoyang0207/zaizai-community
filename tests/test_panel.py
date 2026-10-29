@@ -4,6 +4,8 @@ import pytest
 
 from zaizai.cogs.panel import (
     PANEL_TEMPLATE,
+    PANEL_TITLE,
+    build_panel_embed,
     lock_label,
     owner_denial,
     panel_custom_id,
@@ -109,3 +111,13 @@ def test_unlock_without_category_clears_denies():
         False, EVERYONE, {EVERYONE: False, VERIFIED: False, MOD: True}, {}
     )
     assert changes == {EVERYONE: None, VERIFIED: None}
+
+
+def test_panel_embed_holds_help_text():
+    embed = build_panel_embed("在此聊天发送组队命令")
+    assert embed.title == PANEL_TITLE
+    assert embed.description == "在此聊天发送组队命令"
+
+
+def test_panel_embed_with_empty_help_text_has_no_description():
+    assert build_panel_embed("  ").description is None
