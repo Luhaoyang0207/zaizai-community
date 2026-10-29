@@ -127,15 +127,18 @@ class Store:
             (message_id, room_id),
         )
 
-    def delete_room(self, room_id: int) -> None:
+    def delete_room(self, room_id: int) -> Entry | None:
+        """Delete the room and its entry; return the removed entry, if any."""
         self._db.execute("BEGIN")
         try:
+            entry = self.get_entry_by_room(room_id)
             self._db.execute("DELETE FROM entries WHERE room_id = ?", (room_id,))
             self._db.execute("DELETE FROM rooms WHERE id = ?", (room_id,))
             self._db.execute("COMMIT")
         except Exception:
             self._db.execute("ROLLBACK")
             raise
+        return entry
 
     # entries
     def upsert_entry(
@@ -173,6 +176,14 @@ class Store:
     def delete_entry_by_room(self, room_id: int) -> bool:
         cur = self._db.execute("DELETE FROM entries WHERE room_id = ?", (room_id,))
         return cur.rowcount > 0
+
+    def pop_entry_by_room(self, room_id: int) -> Entry | None:
+        """Delete the room's entry and return it. Its mode can differ from the
+        room's mode (D-014), so callers refresh the entry's board."""
+        entry = self.get_entry_by_room(room_id)
+        if entry is not None:
+            self.delete_entry_by_room(room_id)
+        return entry
 
     def list_entries(self, mode: Mode) -> list[Entry]:
         rows = self._db.execute(

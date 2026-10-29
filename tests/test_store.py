@@ -111,3 +111,22 @@ def test_categories_keep_insertion_order(store):
         store.add_category(Mode.RANKED, c)
     assert store.list_categories(Mode.RANKED) == [30, 10, 20]
     assert store.list_categories(Mode.UNRATED) == []
+
+
+def test_pop_entry_returns_entry_with_its_own_mode(store):
+    # A ranked temp room can carry an unrated entry (D-014).
+    store.add_room(_room(mode=Mode.RANKED))
+    store.upsert_entry(100, Mode.UNRATED, "a", 1, 2, 3, now=1.0)
+    popped = store.pop_entry_by_room(100)
+    assert popped is not None and popped.mode is Mode.UNRATED
+    assert store.get_entry_by_room(100) is None
+    assert store.pop_entry_by_room(100) is None
+
+
+def test_delete_room_returns_removed_entry(store):
+    store.add_room(_room(mode=Mode.RANKED))
+    store.upsert_entry(100, Mode.UNRATED, "a", 1, 2, 3, now=1.0)
+    removed = store.delete_room(100)
+    assert removed is not None and removed.mode is Mode.UNRATED
+    store.add_room(_room(mode=Mode.RANKED))
+    assert store.delete_room(100) is None

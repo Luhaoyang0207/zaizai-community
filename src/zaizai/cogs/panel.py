@@ -268,8 +268,10 @@ class Panel(commands.Cog):
         await discord_call(lambda: channel.set_permissions(target, overwrite=new))
 
     async def _mark_full(self, interaction: discord.Interaction, room: Room) -> None:
-        if self.store.delete_entry_by_room(room.id):
-            self.bot.dispatch("board_dirty", room.mode)
+        entry = self.store.pop_entry_by_room(room.id)
+        if entry is not None:
+            # The entry's own board: it can differ from the room's mode (D-014).
+            self.bot.dispatch("board_dirty", entry.mode)
             await _reply(interaction, MSG_ENTRY_REMOVED)
         else:
             await _reply(interaction, MSG_NO_ENTRY)

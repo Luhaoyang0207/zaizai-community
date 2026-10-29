@@ -145,20 +145,25 @@ class VoiceRooms(commands.Cog):
         rooms = {r.id: r for r in self.store.list_rooms()}
         t = classify_transition(b, a, entrances.keys(), rooms.keys())
 
-        # Member counts only show on the board for rooms with an entry.
+        # Member counts only show on the board for rooms with an entry; the
+        # entry's mode can differ from the room's (D-014).
         if t.left_room is not None:
             room = rooms[t.left_room]
-            if self.store.get_entry_by_room(room.id) is not None:
-                self.bot.dispatch("board_dirty", room.mode)
+            self._dirty_entry_board(room.id)
             if before.channel is not None and not before.channel.members:
                 self._on_room_empty(room)
         if t.joined_room is not None:
             self._cancel_timer(t.joined_room)
-            if self.store.get_entry_by_room(t.joined_room) is not None:
-                self.bot.dispatch("board_dirty", rooms[t.joined_room].mode)
+            self._dirty_entry_board(t.joined_room)
+        # Before room creation, which can be slow or fail.
+        self._update_unmanaged_entries(before.channel, after.channel, rooms.keys())
         if t.entrance_joined is not None:
             await self._create_room(member, entrances[t.entrance_joined])
-        self._update_unmanaged_entries(before.channel, after.channel, rooms.keys())
+
+    def _dirty_entry_board(self, channel_id: int) -> None:
+        entry = self.store.get_entry_by_room(channel_id)
+        if entry is not None:
+            self.bot.dispatch("board_dirty", entry.mode)
 
     def _update_unmanaged_entries(self, before_ch, after_ch, room_ids) -> None:
         """Non-temp voice channels with an entry (D-014): refresh the member
@@ -176,14 +181,13 @@ class VoiceRooms(commands.Cog):
                     self.store.delete_entry_by_room(left)
                 self.bot.dispatch("board_dirty", entry.mode)
         if joined is not None:
-            entry = self.store.get_entry_by_room(joined)
-            if entry is not None:
-                self.bot.dispatch("board_dirty", entry.mode)
+            self._dirty_entry_board(joined)
 
     def _on_room_empty(self, room: Room) -> None:
         if self.cfg.board_remove_when_room_empty:
-            if self.store.delete_entry_by_room(room.id):
-                self.bot.dispatch("board_dirty", room.mode)
+            entry = self.store.pop_entry_by_room(room.id)
+            if entry is not None:
+                self.bot.dispatch("board_dirty", entry.mode)
         self._start_timer(room)
 
     # -- empty timers ----------------------------------------------------
@@ -214,9 +218,10 @@ class VoiceRooms(commands.Cog):
                     await self.queue.run(lambda: discord_call(channel.delete))
                 except discord.NotFound:
                     pass
-            self.store.delete_room(room.id)
-            self.store.delete_entry_by_room(room.id)
+            entry = self.store.delete_room(room.id)
             self.bot.dispatch("board_dirty", room.mode)
+            if entry is not None and entry.mode != room.mode:
+                self.bot.dispatch("board_dirty", entry.mode)
         except asyncio.CancelledError:
             raise
         except Exception as e:
@@ -353,8 +358,7 @@ class VoiceRooms(commands.Cog):
                 lambda rid: isinstance(guild.get_channel(rid), discord.VoiceChannel),
             )
             for rid in gone:
-                self.store.delete_room(rid)
-                self.store.delete_entry_by_room(rid)
+                self.store.delete_room(rid)  # also its entry; boards refresh below
             for rid in moved:
                 vc = guild.get_channel(rid)
                 if not vc.members:
