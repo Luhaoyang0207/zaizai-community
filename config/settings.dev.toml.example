@@ -1,77 +1,146 @@
 # 本地测试用：复制为 config/settings.dev.toml，填入测试服务器的 ID（该文件可提交，只含 ID，不含令牌）。
 # 与 settings.toml 结构相同，请随 settings.toml 的改动同步。
 
-# 值以 docs/PARAMETERS.md 为准；键名与该表一致。
-# 命令不带 "!"；空字符串 = 该模式命令关闭。
+# ============================================================
+# zaizai 组队机器人 — 配置文件
+# ------------------------------------------------------------
+# 每一项的完整说明见 docs/PARAMETERS.md（键名一致）。
+# 改完后重启机器人才会生效。
+# true = 开，false = 关；文字要放在 "引号" 里；ID 是纯数字，不加引号。
+# 获取 ID：Discord 设置 → 高级 → 打开「开发者模式」，右键频道/分类/服务器 →「复制 ID」。
+# ============================================================
 
+
+# ---------- 服务器 ----------
 [guild]
-id = 0                # 部署时填写
-board_channel_id = 0  # 部署时填写：信息组队总表所在频道
+# 服务器 ID（必填）。留 0 时总表不工作、斜杠指令不会立刻出现。
+id = 0
+# 「信息组队」总表所在的文字频道。机器人在这里为每种模式维护一条总表消息。
+board_channel_id = 0
+
+
+# ---------- 三种模式的频道 ----------
+# 每种模式一节：ranked = 排位，unrated = 匹配，other = 其他游戏。
+#   entrance_channel_id：「创造房间」入口语音频道，玩家点进去就自动得到自己的临时房间。
+#   lfg_channel_id：     组队文字频道，玩家在这里发 !pw / !pp 等命令。
+#   category_ids：       临时房间放在哪些分类里，可写多个，按顺序用；都满了机器人会自动新开分类。
+#                        ⚠ 这些分类只给机器人用：重启时会删掉里面没人的语音频道。
+# 某项填 0（或分类写 []）表示该功能在这个模式下不启用。
 
 [modes.ranked]
-entrance_channel_id = 0  # 部署时填写
-lfg_channel_id = 0       # 部署时填写
-category_ids = []          # 部署时填写，可写多个：[111, 222]
+entrance_channel_id = 0
+lfg_channel_id = 0
+category_ids = []
 
 [modes.unrated]
-entrance_channel_id = 0  # 部署时填写
-lfg_channel_id = 0       # 部署时填写
-category_ids = []          # 部署时填写，可写多个：[111, 222]
+entrance_channel_id = 0
+lfg_channel_id = 0
+category_ids = []
 
 [modes.other]
-entrance_channel_id = 0  # 部署时填写
-lfg_channel_id = 0       # 部署时填写
-category_ids = []          # 部署时填写，可写多个：[111, 222]
+entrance_channel_id = 0
+lfg_channel_id = 0
+category_ids = []
 
+
+# ---------- 组队命令 ----------
 [commands]
+# 各模式的命令，不带 "!"。例如 "pw" → 玩家发 !pw 铂钻 3=2。
+# 留空 "" = 该模式不能发命令，也不会有它的总表。
 ranked = "pw"
 unrated = "pp"
 other = ""
+# 是否也认全角感叹号「！pw」（中文输入法常打出来的那种）。
 accept_fullwidth = true
+# 玩家不在临时语音房间里时，是否拒绝并提示他先进语音。
+# 关掉的话，不在房间里发命令会被直接忽略（没有房间就没法上总表）。
 need_voice = true
+# 上面拒绝时回复的文字。
 need_voice_msg = "请先加入语音房间再发组队信息"
+# 是否也允许在临时房间自带的文字聊天里发命令（模式由房间决定）。
 allow_in_room_chat = true
 
+
+# ---------- 玩家消息下方的卡片 ----------
 [card]
+# 发出卡片后是否删除玩家原来那条命令消息（让频道更干净）。
+# 管理员可以用 /setting delete_original 随时改，也能按频道单独设置。
 delete_original = false
+# 条目从总表消失后卡片怎么处理。第一版只支持 "keep"（保留不动），改别的会启动报错。
 after_entry_end = "keep"
+# 卡片上显示哪些内容：需求文字 / "找人组队看这里"总表链接 / 发起人和时间。
 show_requirement = true
 show_board_link = true
 show_host = true
+# 是否显示广告位。
 ad_enabled = true
+# 广告位文字（可以带链接）。留空 = 不显示。管理员可用 /ad 修改。
 ad_text = ""
+# 卡片底部的小字。留空 = 不显示。管理员可用 /motto 修改。
 footer_text = ""
 
+
+# ---------- 信息组队总表 ----------
 [board]
+# 条目多少分钟没有更新（房主没再发命令）就自动从总表清掉。
 entry_timeout_min = 30
+# 房间一没人，就立刻把它的条目从总表移除。
 remove_when_room_empty = true
+# 总表最快多少秒更新一次。短时间内的多次变化会合并成一次，避免触发 Discord 限速。
 refresh_debounce_sec = 5
-max_entries_per_message = 10  # verified: layout fits at most 12 per message (D-010)
+# 一条总表消息最多放几个条目，多了自动分成多条。最大 12（Discord 组件数限制，见 D-010）。
+max_entries_per_message = 10
+# 没有任何条目时总表显示的文字。
 empty_text = "当前没有活跃的信息。"
+# 条目右边的进房按钮上是否显示人数（"3人 @ 排位房 2"）；关掉只显示房间名。
 show_member_count = true
 
+
+# ---------- 临时语音房间 ----------
 [voice]
+# 新房间的人数上限，0 = 不限。
 default_user_limit = 0
+# 房间空了等多少秒再删除（给掉线重连留时间），0 = 立刻删。
 empty_delete_delay_sec = 30
+# 空房间是否留着复用。第一版固定为 false（空了就删），改成 true 会启动报错。
 reuse_empty_rooms = false
+# 每个分类最多放多少个房间，满了用下一个分类。Discord 上限是 50，这里留了余量。
 category_max_channels = 45
+# 建房/删房请求之间至少间隔多少毫秒（排队执行，防止短时间内请求太多）。
 create_queue_interval_ms = 500
 
+# 新房间的名字，{n} 会被换成序号（从 1 开始，优先补空缺的号）。
 [voice.name_template]
 ranked = "排位房 {n}"
 unrated = "匹配房 {n}"
 other = "其他房 {n}"
 
+
+# ---------- 房间控制面板 ----------
+# 房间建好后，机器人在房间自带的聊天里发一条面板并 @房主。只有房主能点按钮。
 [panel]
+# 建房后是否自动发面板。关掉后 /panel 也不能用。
 enabled = true
+# 房主的权限范围。第一版固定 "lock_only"（只能开/锁和点"组队已满"），改别的会启动报错。
 owner_permissions = "lock_only"
+# 面板上是否有 🔓开/🔒锁 按钮（锁住后别人进不来，已在房间里的人不受影响）。
 button_lock = true
+# 面板上是否有「组队已满」按钮（把这个房间的条目从总表移除，卡片保留）。
 button_full = true
+# 「刷新面板」「准星」按钮：第一版没有，必须保持 false，否则启动报错。
 button_refresh = false
 button_crosshair = false
+# 重新召唤面板的指令。第一版固定为 /panel，改这里不会生效。
 recall_command = "/panel"
+# 面板上的说明文字。
 help_text = "在此聊天发送组队命令即可发布组队信息；点「组队已满」可移除组队信息；/panel 可重新召唤本面板。"
 
+
+# ---------- 功能开关（以后拆成多个机器人时用） ----------
 [modules]
+# 这个机器人启用哪些功能：
+#   voice_rooms = 临时语音房间，lfg = 组队命令和卡片，board = 总表，
+#   panel = 房间面板，admin = 管理指令（/ad、/motto、/setting）。
 enabled = ["voice_rooms", "lfg", "board", "panel", "admin"]
+# 这个机器人负责哪些模式。只有一个机器人时保持全部；拆分时每个机器人写自己负责的模式。
 mode_scope = ["ranked", "unrated", "other"]

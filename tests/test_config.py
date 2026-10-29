@@ -39,7 +39,6 @@ def test_load_config_values():
     assert cfg.card_after_entry_end == "keep"
     assert cfg.modes[Mode.RANKED].command == "pw"
     assert cfg.modes[Mode.UNRATED].command == "pp"
-    assert cfg.modes[Mode.OTHER].command is None
     assert cfg.voice_name_template[Mode.RANKED] == "排位房 {n}"
     assert cfg.modes[Mode.UNRATED].name_template == "匹配房 {n}"
     assert cfg.modules_enabled == ("voice_rooms", "lfg", "board", "panel", "admin")
@@ -104,3 +103,12 @@ def test_old_single_category_id_still_works(tmp_path):
 def test_old_single_category_id_zero_means_none(tmp_path):
     cfg = load_config(_with_other_categories(tmp_path, "category_id = 0"))
     assert cfg.modes[Mode.OTHER].category_ids == ()
+
+
+def test_empty_command_means_disabled(tmp_path):
+    text = SETTINGS.read_text(encoding="utf-8")
+    new, n = re.subn(r'(?m)^other = "[^"{]*"$', 'other = ""', text, count=1)
+    assert n == 1
+    path = tmp_path / "settings.toml"
+    path.write_text(new, encoding="utf-8")
+    assert load_config(path).modes[Mode.OTHER].command is None
