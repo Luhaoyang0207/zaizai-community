@@ -10,7 +10,7 @@ from discord.ext import commands
 
 from ..bot import discord_call
 from ..card import build_card
-from ..commands import LfgDecision, decide_lfg, parse_lfg_command
+from ..commands import LfgDecision, allowed_modes, decide_lfg, parse_lfg_command
 from ..config import mode_in_scope
 from ..models import Mode
 from ..settings_view import KEY_AD, KEY_DELETE, KEY_FOOTER, effective_setting
@@ -32,26 +32,34 @@ class Lfg(commands.Cog):
             if mode_in_scope(self.cfg, m) and mc.command
         }
 
-    def _channel_mode(self, channel_id: int) -> Mode | None:
-        for m, mc in self.cfg.modes.items():
-            if (
-                mode_in_scope(self.cfg, m)
-                and mc.lfg_channel_id != 0
-                and mc.lfg_channel_id == channel_id
-            ):
-                return m
-        if self.cfg.commands_allow_in_room_chat:
-            room = self.store.get_room(channel_id)
-            if room is not None:
-                return room.mode
-        return None
+    def _allowed_modes(self, channel) -> set[Mode]:
+        team = {
+            mc.lfg_channel_id: m
+            for m, mc in self.cfg.modes.items()
+            if mode_in_scope(self.cfg, m) and mc.lfg_channel_id != 0
+        }
+        return allowed_modes(
+            channel.id,
+            isinstance(channel, discord.VoiceChannel),
+            team,
+            self._commands().values(),
+            self.cfg.commands_allow_in_room_chat,
+        )
 
-    def _author_room(self, author):
+    def _author_voice(self, author, guild: discord.Guild):
+        """The author's current voice channel in this guild, or None.
+
+        Entrance channels do not count: an entry there would point players at
+        the join-to-create lobby, not at the author's team.
+        """
         voice = getattr(author, "voice", None)
         channel = getattr(voice, "channel", None)
-        if channel is None:
+        if not isinstance(channel, discord.VoiceChannel) or channel.guild.id != guild.id:
             return None
-        return self.store.get_room(channel.id)
+        entrances = {mc.entrance_channel_id for mc in self.cfg.modes.values()}
+        if channel.id in entrances:
+            return None
+        return channel
 
     def _card_settings(self, channel_id: int) -> tuple[str | None, str | None]:
         """(ad_text, footer_text) in effect now; ad_enabled=false hides the ad."""
@@ -86,11 +94,9 @@ class Lfg(commands.Cog):
         )
         if parsed is None:
             return
-        room = self._author_room(message.author)
+        voice = self._author_voice(message.author, message.guild)
         decision = decide_lfg(
-            parsed,
-            self._channel_mode(message.channel.id),
-            room.mode if room else None,
+            parsed, self._allowed_modes(message.channel), voice is not None
         )
         if decision is LfgDecision.IGNORE:
             return
@@ -102,7 +108,7 @@ class Lfg(commands.Cog):
                     )
                 )
             return
-        assert room is not None
+        assert voice is not None
 
         now = time.time()
         ad_text, footer_text = self._card_settings(message.channel.id)
@@ -120,8 +126,9 @@ class Lfg(commands.Cog):
         reply = await discord_call(
             lambda: message.reply(embed=embed, mention_author=False)
         )
+        previous = self.store.get_entry_by_room(voice.id)
         self.store.upsert_entry(
-            room.id,
+            voice.id,
             parsed.mode,
             parsed.text,
             message.author.id,
@@ -130,6 +137,9 @@ class Lfg(commands.Cog):
             now=now,
         )
         self.bot.dispatch("board_dirty", parsed.mode)
+        if previous is not None and previous.mode != parsed.mode:
+            # The channel's entry moved to the other board (one entry per room).
+            self.bot.dispatch("board_dirty", previous.mode)
 
         if self._delete_original(message.channel.id):
             try:

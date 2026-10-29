@@ -1,5 +1,5 @@
 import re
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 from dataclasses import dataclass
 from enum import Enum
 
@@ -33,13 +33,33 @@ def parse_lfg_command(
     return ParsedCommand(lowered[match.group(1).lower()], match.group(2).strip())
 
 
+def allowed_modes(
+    channel_id: int,
+    is_voice_chat: bool,
+    team_channels: Mapping[int, Mode],
+    command_modes: Collection[Mode],
+    allow_in_voice_chat: bool,
+) -> set[Mode]:
+    """Modes whose command is accepted in this channel (D-014).
+
+    A team text channel accepts only its own mode; the built-in chat of any
+    voice channel accepts every enabled command (if allowed); others none.
+    """
+    if channel_id in team_channels:
+        mode = team_channels[channel_id]
+        return {mode} if mode in command_modes else set()
+    if is_voice_chat and allow_in_voice_chat:
+        return set(command_modes)
+    return set()
+
+
 def decide_lfg(
     parsed: ParsedCommand | None,
-    channel_mode: Mode | None,
-    author_room_mode: Mode | None,
+    allowed: Collection[Mode],
+    author_in_voice: bool,
 ) -> LfgDecision:
-    if parsed is None or parsed.mode != channel_mode:
+    if parsed is None or parsed.mode not in allowed:
         return LfgDecision.IGNORE
-    if author_room_mode != parsed.mode:
+    if not author_in_voice:
         return LfgDecision.NEED_VOICE
     return LfgDecision.OK

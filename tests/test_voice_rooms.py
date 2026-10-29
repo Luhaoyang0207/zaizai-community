@@ -1,5 +1,6 @@
 from zaizai.cogs.voice_rooms import (
     classify_transition,
+    entry_channel_changes,
     exclude_unmanaged,
     ordered_categories,
     overflow_category_name,
@@ -60,3 +61,18 @@ def test_ordered_categories_config_first_then_overflow():
 
 def test_ordered_categories_no_config():
     assert ordered_categories([], [5, 6]) == [5, 6]
+
+
+def test_entry_channels_unmanaged_left_and_joined():
+    assert entry_channel_changes(55, 66, {100}) == (55, 66)
+
+
+def test_entry_channels_temp_rooms_excluded():
+    assert entry_channel_changes(100, 66, {100}) == (None, 66)
+    assert entry_channel_changes(55, 100, {100}) == (55, None)
+
+
+def test_entry_channels_no_change_or_none():
+    assert entry_channel_changes(55, 55, {100}) == (None, None)
+    assert entry_channel_changes(None, None, {100}) == (None, None)
+    assert entry_channel_changes(None, 66, {100}) == (None, 66)

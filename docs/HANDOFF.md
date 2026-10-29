@@ -1,6 +1,6 @@
 # Handoff
 
-_Last updated: 2026-10-28 by Claude_
+_Last updated: 2026-10-29 by Claude_
 
 ## Current goal
 为 zaizai 玩家社区做一个 Discord 组队机器人（Python + discord.py，Docker 部署）。计划的 15 个任务已全部在分支 `feat/zaizai-bot` 实现，自动化测试通过；剩下人工验证、填 ID 和合并。
@@ -11,6 +11,7 @@ _Last updated: 2026-10-28 by Claude_
 - 验证：`docker compose build` 成功；Python 3.12 容器内 `python -m pytest` 114 通过；镜像内能 import `zaizai.bot`、`zaizai.cogs.board`、`zaizai.cogs.panel`。未启动机器人（无令牌、未连 Discord）。
 - 匹配模式内部名称改为 `unrated`（配置节 `[modes.unrated]`，见 D-012）；玩家看到的名称和 `!pp` 命令不变。
 - 每个模式的分类改为列表 `category_ids = [...]`，可写多个、按顺序使用（见 D-013）。
+- 组队命令可在任何语音频道（含常驻频道）的聊天里发，模式由命令决定；发命令的人须在语音频道里，条目挂在其所在频道（见 D-014）。
 - 文档：新增 D-011，更新 TODO。
 - 最终审查修复：总表只在内容变化时编辑（不再每次 fetch、`更新于`=内容最后变化时间；手动删除的总表消息由删除事件触发几秒内重发）、成员进出只在有条目时刷新总表；每次 on_ready（含重连）都对账；`card.show_*` 生效、未实现的配置值启动报错；锁房同时拒绝允许连接的身份组；斜杠指令错误不再重复上报；移出分类的房间继续被记录；README 补充拆分注意事项。
 

@@ -157,12 +157,17 @@ class Board(commands.Cog):
         ]
 
     def _live_entries(self, mode: Mode, guild: discord.Guild | None) -> list[Entry]:
-        """Delete entries whose room is gone (store or guild); return the rest."""
+        """Delete entries whose voice channel is gone; return the rest.
+
+        Any voice channel counts, temp room or not (D-014). Without the guild
+        nothing can be checked, so every entry is kept until the next run
+        (temp-room entries are already removed together with their room).
+        """
 
         def room_exists(room_id: int) -> bool:
-            if self.store.get_room(room_id) is None:
-                return False
-            return guild is None or guild.get_channel(room_id) is not None
+            if guild is None:
+                return True
+            return isinstance(guild.get_channel(room_id), discord.VoiceChannel)
 
         live, gone = split_live_entries(self.store.list_entries(mode), room_exists)
         for entry in gone:

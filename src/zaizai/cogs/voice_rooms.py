@@ -44,6 +44,23 @@ def classify_transition(
     )
 
 
+def entry_channel_changes(
+    before_id: int | None,
+    after_id: int | None,
+    room_ids: Collection[int],
+) -> tuple[int | None, int | None]:
+    """(left, joined) voice channels that are not managed temp rooms.
+
+    Such channels can still carry a board entry (D-014); temp rooms are
+    handled by classify_transition.
+    """
+    if before_id == after_id:
+        return (None, None)
+    left = before_id if before_id is not None and before_id not in room_ids else None
+    joined = after_id if after_id is not None and after_id not in room_ids else None
+    return (left, joined)
+
+
 def exclude_unmanaged(
     live: Mapping[int, int],
     entrance_ids: Collection[int],
@@ -141,6 +158,27 @@ class VoiceRooms(commands.Cog):
                 self.bot.dispatch("board_dirty", rooms[t.joined_room].mode)
         if t.entrance_joined is not None:
             await self._create_room(member, entrances[t.entrance_joined])
+        self._update_unmanaged_entries(before.channel, after.channel, rooms.keys())
+
+    def _update_unmanaged_entries(self, before_ch, after_ch, room_ids) -> None:
+        """Non-temp voice channels with an entry (D-014): refresh the member
+        count; drop the entry once the channel is empty. The channel itself
+        is never touched."""
+        left, joined = entry_channel_changes(
+            before_ch.id if before_ch else None,
+            after_ch.id if after_ch else None,
+            room_ids,
+        )
+        if left is not None:
+            entry = self.store.get_entry_by_room(left)
+            if entry is not None:
+                if self.cfg.board_remove_when_room_empty and not before_ch.members:
+                    self.store.delete_entry_by_room(left)
+                self.bot.dispatch("board_dirty", entry.mode)
+        if joined is not None:
+            entry = self.store.get_entry_by_room(joined)
+            if entry is not None:
+                self.bot.dispatch("board_dirty", entry.mode)
 
     def _on_room_empty(self, room: Room) -> None:
         if self.cfg.board_remove_when_room_empty:
@@ -344,6 +382,18 @@ class VoiceRooms(commands.Cog):
             for rid, room in tracked.items():
                 if rid in live and not live[rid].members:
                     self._on_room_empty(room)
+        if self.cfg.board_remove_when_room_empty:
+            # Non-temp channels emptied while disconnected lose their entry too.
+            tracked_ids = {r.id for r in self.store.list_rooms()}
+            for mode in self._modes():
+                for entry in self.store.list_entries(mode):
+                    vc = guild.get_channel(entry.room_id)
+                    if (
+                        entry.room_id not in tracked_ids
+                        and isinstance(vc, discord.VoiceChannel)
+                        and not vc.members
+                    ):
+                        self.store.delete_entry_by_room(entry.room_id)
         for mode in self._modes():
             self.bot.dispatch("board_dirty", mode)
 
